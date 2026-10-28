@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
-import { PALETTE, Tube, curve, emph } from './common';
+import { PALETTE, Tube, curve, emph, M } from './common';
 
 type P = [number, number, number];
 // Dendrites branch from the soma (left); the axon runs right to the terminal branches.
@@ -39,11 +39,11 @@ export default function Neuron({ selected, reduced }: SceneProps) {
     <group position={[-0.05, 0, 0]} scale={0.95}>
       <mesh position={[-1.15, 0, 0]} scale={[1, 0.85, 0.85]}>
         <sphereGeometry args={[0.32, 32, 24]} />
-        <meshStandardMaterial {...emph(selected, 'body', PALETTE.tissue)} />
+        <M {...emph(selected, 'body', PALETTE.tissue)} />
       </mesh>
       <mesh position={[-1.15, 0.02, 0.18]}>
         <sphereGeometry args={[0.11, 20, 16]} />
-        <meshStandardMaterial {...emph(selected, 'body', '#7b6aa8')} />
+        <M {...emph(selected, 'body', '#7b6aa8')} />
       </mesh>
       {DENDRITES.map((d, i) => (
         <Tube key={i} points={d} radius={0.035} material={emph(selected, 'dendrite', PALETTE.tissue)} />
@@ -52,7 +52,7 @@ export default function Neuron({ selected, reduced }: SceneProps) {
       {MYELIN_X.map((x) => (
         <mesh key={x} position={[x, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
           <cylinderGeometry args={[0.1, 0.1, 0.36, 24]} />
-          <meshStandardMaterial {...emph(selected, 'myelin', PALETTE.myelin)} />
+          <M {...emph(selected, 'myelin', PALETTE.myelin)} />
         </mesh>
       ))}
       {TERMINALS.map((d, i) => (
@@ -60,7 +60,7 @@ export default function Neuron({ selected, reduced }: SceneProps) {
           <Tube points={d} radius={0.03} material={emph(selected, 'terminal', PALETTE.tissueDeep)} />
           <mesh position={d[d.length - 1]}>
             <sphereGeometry args={[0.06, 16, 12]} />
-            <meshStandardMaterial {...emph(selected, 'terminal', PALETTE.amber)} />
+            <M {...emph(selected, 'terminal', PALETTE.amber)} />
           </mesh>
         </group>
       ))}

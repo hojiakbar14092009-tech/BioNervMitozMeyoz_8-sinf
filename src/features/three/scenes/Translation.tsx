@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
 import { TRANSLATION_CODONS } from '../sequences';
-import { emph } from './common';
+import { emph, M } from './common';
 
 const NT_COLOR: Record<string, string> = { A: '#5f7fc8', U: '#9a7fd1', G: '#3f9d97', C: '#c97f95' };
 const W = 0.42; // codon width
@@ -31,7 +31,7 @@ export default function Translation({ stage, selected, reduced }: SceneProps) {
             {[...c.codon].map((nt, j) => (
               <mesh key={j} position={[(j - 1) * 0.13, 0, 0]}>
                 <boxGeometry args={[0.12, 0.16, 0.12]} />
-                <meshStandardMaterial {...emph(selected, 'mrna', NT_COLOR[nt])} />
+                <M {...emph(selected, 'mrna', NT_COLOR[nt])} />
               </mesh>
             ))}
           </group>
@@ -41,11 +41,11 @@ export default function Translation({ stage, selected, reduced }: SceneProps) {
       {/* ribosome: small + large subunit, covering two codons */}
       <mesh position={[W * 0.5, -0.62, -0.05]} scale={[1.15, 0.45, 0.6]}>
         <sphereGeometry args={[0.5, 32, 20]} />
-        <meshStandardMaterial {...emph(selected, 'ribosome', '#b9a3d6')} transparent opacity={0.5} depthWrite={false} />
+        <M {...emph(selected, 'ribosome', '#b9a3d6')} transparent opacity={0.5} depthWrite={false} />
       </mesh>
       <mesh position={[W * 0.5, -0.12, -0.05]} scale={[1.2, 0.75, 0.7]}>
         <sphereGeometry args={[0.55, 32, 20]} />
-        <meshStandardMaterial {...emph(selected, 'ribosome', '#9d8bc4')} transparent opacity={0.42} depthWrite={false} />
+        <M {...emph(selected, 'ribosome', '#9d8bc4')} transparent opacity={0.42} depthWrite={false} />
       </mesh>
 
       {/* tRNA at the current codon */}
@@ -53,11 +53,11 @@ export default function Translation({ stage, selected, reduced }: SceneProps) {
         <group position={[0, 0, 0.1]}>
           <mesh position={[0, -0.2, 0]}>
             <cylinderGeometry args={[0.05, 0.05, 0.5, 12]} />
-            <meshStandardMaterial {...emph(selected, 'trna', '#e0b36a')} />
+            <M {...emph(selected, 'trna', '#e0b36a')} />
           </mesh>
           <mesh position={[0, 0.08, 0]}>
             <torusGeometry args={[0.12, 0.035, 10, 24]} />
-            <meshStandardMaterial {...emph(selected, 'trna', '#e0b36a')} />
+            <M {...emph(selected, 'trna', '#e0b36a')} />
           </mesh>
         </group>
       )}
@@ -68,7 +68,7 @@ export default function Translation({ stage, selected, reduced }: SceneProps) {
           <group key={i} position={[-(chain.length - 1 - i) * 0.2, (chain.length - 1 - i) * 0.06, 0]}>
             <mesh>
               <sphereGeometry args={[0.085, 18, 14]} />
-              <meshStandardMaterial {...emph(selected, 'chain', AMINO_COLORS[i % AMINO_COLORS.length])} />
+              <M {...emph(selected, 'chain', AMINO_COLORS[i % AMINO_COLORS.length])} />
             </mesh>
           </group>
         ))}

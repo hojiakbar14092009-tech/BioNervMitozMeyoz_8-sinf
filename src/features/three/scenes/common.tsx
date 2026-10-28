@@ -36,9 +36,14 @@ export function Tube({ points, radius, material, segments = 48 }: { points: [num
   return (
     <mesh>
       <tubeGeometry args={[c, segments, radius, 10, false]} />
-      <meshStandardMaterial {...material} />
+      <M {...material} />
     </mesh>
   );
 }
 
 export const curve = (points: [number, number, number][]) => new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
+
+/** Standard material that is rebuilt when transparency flips (three.js needs a recompile for that). */
+export function M(props: ReturnType<typeof emph> & { depthWrite?: boolean; vertexColors?: boolean }) {
+  return <meshStandardMaterial key={props.transparent ? 't' : 'o'} {...props} />;
+}

@@ -21,7 +21,7 @@ export const books: Record<BookId, Book> = {
     route: '/10-sinf',
     source: 'Biologiya 10. Darslik, 2022',
     numbering: ['2.8', '2.9', '2.10', '2.11', '2.12', '2.13', '2.14', '2.15'],
-    accent: '#2f8a86',
+    accent: '#27756f',
   },
 };
 

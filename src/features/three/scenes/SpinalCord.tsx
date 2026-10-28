@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
-import { PALETTE, Tube, emph } from './common';
+import { PALETTE, Tube, emph, M } from './common';
 
 type P = [number, number, number];
 
@@ -41,15 +41,15 @@ export default function SpinalCord({ selected }: SceneProps) {
       {/* white matter: oval cord with a hole for the central canal */}
       <mesh rotation={[Math.PI / 2, 0, 0]} scale={[1.15, 1, 0.92]}>
         <cylinderGeometry args={[0.75, 0.75, depth, 48]} />
-        <meshStandardMaterial {...emph(selected, 'white', PALETTE.white)} transparent opacity={selected && selected !== 'white' ? 0.22 : 0.6} />
+        <M {...emph(selected, 'white', PALETTE.white)} transparent opacity={selected && selected !== 'white' ? 0.22 : 0.6} />
       </mesh>
       <mesh position={[0, 0, -depth / 2 - 0.005]} scale={1.18}>
         <extrudeGeometry args={[shape, { depth: depth + 0.01, bevelEnabled: false, curveSegments: 20 }]} />
-        <meshStandardMaterial {...emph(selected, 'grey', PALETTE.grey)} />
+        <M {...emph(selected, 'grey', PALETTE.grey)} />
       </mesh>
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, -0.024, 0]}>
         <cylinderGeometry args={[0.055, 0.055, depth + 0.02, 20]} />
-        <meshStandardMaterial {...emph(selected, 'canal', '#7fb3d6')} />
+        <M {...emph(selected, 'canal', '#7fb3d6')} />
       </mesh>
       {[DORSAL_R, DORSAL_L].map((p, i) => (
         <Tube key={`d${i}`} points={p} radius={0.05} material={emph(selected, 'dorsal', PALETTE.blue)} />
@@ -63,7 +63,7 @@ export default function SpinalCord({ selected }: SceneProps) {
       {[1, -1].map((s) => (
         <mesh key={s} position={[s * 1.05, 0.48, 0]} scale={[1.3, 0.9, 0.9]}>
           <sphereGeometry args={[0.12, 20, 16]} />
-          <meshStandardMaterial {...emph(selected, ['ganglion', 'dorsal'], PALETTE.amber)} />
+          <M {...emph(selected, ['ganglion', 'dorsal'], PALETTE.amber)} />
         </mesh>
       ))}
     </group>

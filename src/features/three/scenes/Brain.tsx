@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
-import { emph } from './common';
+import { emph, M } from './common';
 
 type Lobe = 'frontal' | 'parietal' | 'temporal' | 'occipital';
 const LOBE_COLOR: Record<Lobe, THREE.Color> = {
@@ -62,7 +62,7 @@ function Hemisphere({ side, selected, transparent }: { side: 1 | -1; selected: s
   }, [selected, geometry, lobes, side]);
   return (
     <mesh geometry={geometry} position={[0, 0.25, side * 0.36]}>
-      <meshStandardMaterial vertexColors roughness={0.72} transparent={transparent} opacity={transparent ? 0.18 : 1} depthWrite={!transparent} />
+      <meshStandardMaterial key={transparent ? "t" : "o"} vertexColors roughness={0.72} transparent={transparent} opacity={transparent ? 0.18 : 1} depthWrite={!transparent} />
     </mesh>
   );
 }
@@ -76,33 +76,33 @@ export default function Brain({ selected }: SceneProps) {
       {/* diencephalon (inside, under the hemispheres) */}
       <mesh position={[0.1, -0.15, 0]} scale={[1.2, 0.8, 0.9]}>
         <sphereGeometry args={[0.24, 28, 20]} />
-        <meshStandardMaterial {...emph(selected, 'diencephalon', '#c58f8a')} />
+        <M {...emph(selected, 'diencephalon', '#c58f8a')} />
       </mesh>
       {/* midbrain */}
       <mesh position={[0.32, -0.48, 0]} rotation={[0, 0, -0.35]}>
         <cylinderGeometry args={[0.17, 0.16, 0.3, 24]} />
-        <meshStandardMaterial {...emph(selected, 'midbrain', '#b98aa0')} />
+        <M {...emph(selected, 'midbrain', '#b98aa0')} />
       </mesh>
       {/* pons */}
       <mesh position={[0.4, -0.72, 0.02]} scale={[0.9, 0.85, 1]}>
         <sphereGeometry args={[0.22, 28, 20]} />
-        <meshStandardMaterial {...emph(selected, 'pons', '#c6a07c')} />
+        <M {...emph(selected, 'pons', '#c6a07c')} />
       </mesh>
       {/* medulla oblongata, continuing into the spinal cord */}
       <mesh position={[0.52, -1.05, 0]} rotation={[0, 0, -0.18]}>
         <cylinderGeometry args={[0.15, 0.1, 0.5, 24]} />
-        <meshStandardMaterial {...emph(selected, 'medulla', '#9fb48a')} />
+        <M {...emph(selected, 'medulla', '#9fb48a')} />
       </mesh>
       {/* cerebellum: two small hemispheres under the occipital lobes */}
       {[1, -1].map((s) => (
         <mesh key={s} position={[0.95, -0.62, s * 0.24]} scale={[0.8, 0.55, 0.7]}>
           <sphereGeometry args={[0.42, 32, 24]} />
-          <meshStandardMaterial {...emph(selected, 'cerebellum', '#8fa3c9')} />
+          <M {...emph(selected, 'cerebellum', '#8fa3c9')} />
         </mesh>
       ))}
       <mesh position={[0.95, -0.62, 0]} scale={[0.5, 0.45, 0.35]}>
         <sphereGeometry args={[0.42, 24, 16]} />
-        <meshStandardMaterial {...emph(selected, 'cerebellum', '#8297bf')} />
+        <M {...emph(selected, 'cerebellum', '#8297bf')} />
       </mesh>
     </group>
   );

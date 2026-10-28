@@ -119,7 +119,7 @@ export default function Viewer({ scene }: { scene: SceneConfig }) {
             <Suspense fallback={<div className="viewer-loading" role="status">3D model yuklanmoqda…</div>}>
               <Canvas
                 dpr={dpr}
-                camera={{ position: [0, 0, 4.2], fov: 42 }}
+                camera={{ position: [0, 0, window.innerWidth < 768 ? 5.4 : 4.2], fov: 42 }}
                 gl={{ antialias: true, powerPreference: 'high-performance' }}
                 aria-label={scene.title}
                 role="img"

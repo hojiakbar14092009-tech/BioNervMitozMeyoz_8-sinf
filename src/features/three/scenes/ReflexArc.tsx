@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
-import { PALETTE, Tube, curve, emph } from './common';
+import { PALETTE, Tube, curve, emph, M } from './common';
 
 type P = [number, number, number];
 const SENSORY: P[] = [[-1.9, -1.0, 0], [-1.5, -0.4, 0.1], [-0.9, 0.2, 0.05], [-0.35, 0.45, 0]];
@@ -54,26 +54,26 @@ export default function ReflexArc({ selected, pulse, reduced }: SceneProps) {
       {/* spinal cord segment: white matter with grey core */}
       <mesh position={[0, 0.25, -0.15]}>
         <cylinderGeometry args={[0.62, 0.62, 0.5, 40]} />
-        <meshStandardMaterial {...emph(sel, 'inter', PALETTE.white)} transparent opacity={0.55} />
+        <M {...emph(sel, 'inter', PALETTE.white)} transparent opacity={0.55} />
       </mesh>
       <mesh position={[0, 0.25, -0.15]}>
         <cylinderGeometry args={[0.3, 0.3, 0.52, 6]} />
-        <meshStandardMaterial {...emph(sel, 'inter', PALETTE.grey)} />
+        <M {...emph(sel, 'inter', PALETTE.grey)} />
       </mesh>
       <mesh position={[-1.9, -1.0, 0]}>
         <sphereGeometry args={[0.14, 20, 16]} />
-        <meshStandardMaterial {...emph(sel, 'receptor', PALETTE.amber)} />
+        <M {...emph(sel, 'receptor', PALETTE.amber)} />
       </mesh>
       <mesh position={[-0.95, 0.22, 0.05]}>
         <sphereGeometry args={[0.1, 18, 14]} />
-        <meshStandardMaterial {...emph(sel, 'sensory', PALETTE.blue)} />
+        <M {...emph(sel, 'sensory', PALETTE.blue)} />
       </mesh>
       <Tube points={SENSORY} radius={0.04} material={emph(sel, 'sensory', PALETTE.blue)} />
       <Tube points={INTER} radius={0.035} material={emph(sel, 'inter', PALETTE.teal)} />
       <Tube points={MOTOR} radius={0.04} material={emph(sel, 'motor', PALETTE.rose)} />
       <mesh ref={muscle} position={[1.95, -1.15, 0]} scale={[1.35, 0.55, 0.55]}>
         <sphereGeometry args={[0.32, 32, 20]} />
-        <meshStandardMaterial {...emph(sel, 'effector', PALETTE.tissueDeep)} />
+        <M {...emph(sel, 'effector', PALETTE.tissueDeep)} />
       </mesh>
       <mesh ref={spark} visible={false}>
         <sphereGeometry args={[0.07, 16, 12]} />

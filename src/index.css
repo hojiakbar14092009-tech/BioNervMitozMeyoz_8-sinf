@@ -14,7 +14,7 @@
   --bad-bg: #f6e7e4;
   --warn-bg: #f7efdc;
   --g8: #5b6bb5;
-  --g10: #2f8a86;
+  --g10: #27756f;
   --chr-p: #5f7fc8;
   --chr-m: #c9778f;
   --accent: #5b6bb5;
@@ -1799,4 +1799,46 @@ select {
 .card-grade8,
 .card-grade10 {
   --a-soft: color-mix(in srgb, var(--a) 11%, var(--surface));
+}
+
+/* narrowest phones (320px): keep the bar and answer rows inside the viewport */
+@media (max-width: 359px) {
+  .in-book .brand span:last-child {
+    display: none;
+  }
+  .topbar-inner {
+    gap: 2px;
+  }
+}
+.numcheck-row {
+  flex-wrap: wrap;
+}
+.numcheck-row input {
+  flex: 1 1 7em;
+  max-width: 12em;
+}
+
+/* touch targets ≥ 44px */
+.seg button,
+.codon-in,
+input[type='range'] {
+  min-height: 44px;
+}
+.sdot {
+  width: 40px;
+  height: 44px;
+}
+.sdot::after {
+  inset: 16px 14px;
+}
+.sdot.on::after {
+  inset: 14px 12px;
+}
+.book-chip {
+  position: relative;
+}
+.book-chip::before {
+  content: '';
+  position: absolute;
+  inset: -6px -2px; /* 32px pill, 44px tap area */
 }

@@ -50,6 +50,7 @@ export default function Quiz({ topic, questions, next }: { topic: Topic; questio
   const [states, setStates] = useState<QState[]>(() => questions.map(freshQ));
   const [index, setIndex] = useState(0);
   const [done, setDone] = useState(false);
+  const [notice, setNotice] = useState('');
   const headRef = useRef<HTMLHeadingElement>(null);
   const q = questions[index];
   const s = states[index];
@@ -63,7 +64,11 @@ export default function Quiz({ topic, questions, next }: { topic: Topic; questio
   const answer = (a: string) => {
     if (q.type === 'mcq') play('click');
     const r = submit(s, a, isCorrect(q, a));
-    if (!r) return;
+    if (!r) {
+      if (s.status === 'open') setNotice('Bu javob allaqachon tekshirilgan — boshqasini tanlang yoki tartibni o‘zgartiring.');
+      return;
+    }
+    setNotice('');
     if (r.sound) play(r.sound);
     setStates((prev) => prev.map((x, i) => (i === index ? r.state : x)));
   };
@@ -166,6 +171,7 @@ export default function Quiz({ topic, questions, next }: { topic: Topic; questio
       )}
 
       <div className="feedback" aria-live="polite">
+        {notice && s.status === 'open' && <p className="fb fb-warn">{notice}</p>}
         {s.status === 'open' && s.attempts === 1 && <p className="fb fb-warn">Bu to‘g‘ri javob emas. Yana bir marta urinib ko‘ring — {left} ta urinish qoldi.</p>}
         {s.status === 'open' && s.attempts === 2 && <p className="fb fb-warn">Yana noto‘g‘ri. O‘ylab javob bering — oxirgi urinish.</p>}
         {s.status === 'correct' && (
@@ -185,9 +191,9 @@ export default function Quiz({ topic, questions, next }: { topic: Topic; questio
       </div>
 
       <div className="row-actions">
-        <button type="button" className="btn" disabled={index === 0} onClick={() => setIndex(index - 1)}>← Oldingi</button>
+        <button type="button" className="btn" disabled={index === 0} onClick={() => { setNotice(''); setIndex(index - 1); }}>← Oldingi</button>
         {index < questions.length - 1 ? (
-          <button type="button" className="btn btn-primary" disabled={!locked} onClick={() => setIndex(index + 1)}>Keyingi savol →</button>
+          <button type="button" className="btn btn-primary" disabled={!locked} onClick={() => { setNotice(''); setIndex(index + 1); }}>Keyingi savol →</button>
         ) : (
           <button type="button" className="btn btn-primary" disabled={!states.every((x) => x.status !== 'open')} onClick={finish}>Natijani ko‘rish</button>
         )}
