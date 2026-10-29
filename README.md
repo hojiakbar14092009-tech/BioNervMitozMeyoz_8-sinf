@@ -65,7 +65,49 @@ Biological facts come **only** from the two textbooks. Each book's facts stay in
 
 ## 3D
 
-Scenes are procedural React Three Fiber components; no third-party models are downloaded or hotlinked. The scenes are: neuron, reflex arc, spinal cord section, brain (per-lesson region emphasis), cell energy flow, DNA, ribosome translation, and mitosis/meiosis. Each scene is lazy-loaded and is mounted only near the viewport. Device pixel ratio adapts to measured performance (mobile starts at 1.5 or less). If WebGL is unavailable or a scene fails, a schematic SVG with the same labels is shown instead. `prefers-reduced-motion` disables auto-rotation and decorative motion.
+Scenes are procedural React Three Fiber components; no third-party models are downloaded or hotlinked. The scenes are: neuron, reflex arc, spinal cord section, brain (per-lesson region emphasis), cell energy flow, DNA, ribosome translation, mitosis/meiosis, and a mitosis-vs-meiosis comparison (2.15).
+
+**Identification layer.** Every scene declares, in its topic manifest:
+- `what`: one sentence answering "Bu nima?";
+- `hotspots`: each with a label, textbook text, source **page** and legend **colour**.
+
+Validation fails if a label's page falls outside its lesson. Scenes render geometry through `Part` (`scenes/common.tsx`), which reads its colour from the same hotspot data as the legend. Tapping a structure selects it: the part gets a restrained emphasis and outline and the rest is subdued. The info card (`StructureInfo`) shows the name, explanation and page. On wide screens one anchored label follows the selected part; phones use the card instead of floating text. Process scenes (impulse, translation, mitosis, meiosis) share one stage timeline (`structures.tsx → stagesOf`) that drives the 3D state, the on-canvas badge (`2 / 9 · MEYOZ I`) and the explanation.
+
+**Rendering.** The lighting is a soft key/fill/rim rig plus a locally generated studio environment (drei `Lightformer`, no HDR download) and contact shadows. Organic geometry comes from tapered tubes and displaced surfaces, with brain gyri and sulci and cerebellar folia. Each model opens with a camera preset; "Boshlang‘ich holat" restores the view and clears the selection.
+
+**Performance.** Scenes are lazy-loaded and mounted only near the viewport, so one WebGL context is active at a time. Device pixel ratio adapts to measured performance (mobile starts at 1.5 or less). A veil shows until the first frames render. If WebGL is unavailable or a scene fails, a schematic SVG with the title, description and legend is shown instead. `prefers-reduced-motion` disables auto-rotation and decorative motion.
+
+## Highlights
+
+Highlights are created only by the learner: select text in a lesson block, then tap "Belgilash".
+- **What can be highlighted:** only lesson text blocks (`data-hl-block`); quiz answers, navigation and 3D controls cannot be.
+- **What is stored:** the record keeps the book id, topic key, block id, exact text and offsets. If the text shifts, the highlight re-anchors by its exact text.
+- **Saved list:** each highlight appears in **Belgilanganlar** immediately, which offers search, grade and lesson filters, dates, deletion, and a link to the exact source (`/8-sinf/41#hl-…`). The link scrolls to the mark and briefly emphasises it.
+- **Colours:** light and dark mode use separate tokens (`--hl-bg`, `--hl-edge`, `--hl-text`).
+
+## Navigation
+
+Every secondary page has a Back button (`components/BackButton.tsx`). It uses in-app history when it exists; otherwise it goes to the page's parent. `ScrollRestoration` keeps the reading position when returning.
+
+| Route | Back goes to (no history) | Book context visible | Reach home |
+|---|---|---|---|
+| `/` | — (root) | — | — |
+| `/8-sinf`, `/10-sinf` | `/` | header chip, card | Kitoblar, logo |
+| `/8-sinf/:n`, `/10-sinf/:n` | that book's dashboard | chip, breadcrumb, menu | logo, menu, breadcrumb |
+| `/belgilanganlar` | `/` | per item | logo, empty-state links |
+| unknown route | `/` | — | button |
+
+On the quiz results screen, "Mavzuga qaytish" scrolls back to the lesson top, and "Keyingi" goes to the next lesson in the same book.
+
+## Opening animation
+
+The opening animation is SVG + CSS, with no WebGL and no dependency. It runs about 2.5 s:
+1. 16 points gather onto a cell membrane.
+2. A chromosome forms inside the cell.
+3. Neuron dendrites grow on one side, and on the other an axon drawn as a DNA double strand.
+4. The title appears, and the overlay fades into the dashboard.
+
+It plays once per browser session (`sessionStorage`) and has an "O‘tkazib yuborish" (skip) button. With reduced motion it becomes a short static fade. The same mark is the header logo.
 
 ## Audio mapping
 

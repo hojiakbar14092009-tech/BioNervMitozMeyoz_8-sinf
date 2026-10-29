@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, ScrollRestoration, useLocation } from 'react-router-dom';
 import type { BookId } from '../types';
 import { books } from '../data/books';
 import { topicPath, topicsByBook } from '../data/registry';
 import { actions, useAppState } from '../lib/store';
 import { stopAudio } from '../lib/audio';
+import { useToast } from '../lib/toast';
+import Intro, { BioMark } from './Intro';
 
 export function bookFromPath(path: string): BookId | null {
   if (path.startsWith(books.grade8.route)) return 'grade8';
@@ -82,7 +84,6 @@ export default function Layout() {
   useEffect(() => {
     setOpen(false);
     stopAudio();
-    if (!window.location.hash) window.scrollTo(0, 0);
   }, [pathname]);
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export default function Layout() {
             </button>
           )}
           <Link to="/" className="brand">
-            <span className="brand-mark" aria-hidden="true">◐</span>
+            <BioMark className="brand-svg" />
             <span>Biologiya</span>
           </Link>
           {bookId && (
@@ -152,9 +153,26 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+      <Toaster />
+      <Intro />
+      <ScrollRestoration />
       <footer className="site-foot muted small">
         Mazmun manbalari: «Biologiya (Odam va uning salomatligi)» 8-sinf darsligi va «Biologiya 10» (2022) darsligi.
       </footer>
+    </div>
+  );
+}
+
+function Toaster() {
+  const t = useToast();
+  return (
+    <div className="toast-region" role="status" aria-live="polite">
+      {t && (
+        <div className="toast" key={t.id}>
+          <span>✓ {t.text}</span>
+          {t.link && <Link to={t.link.to}>{t.link.label}</Link>}
+        </div>
+      )}
     </div>
   );
 }

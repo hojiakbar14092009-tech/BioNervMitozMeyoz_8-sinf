@@ -4,6 +4,7 @@ import { books } from '../data/books';
 import { topicLabel, topicPath, topicsByBook } from '../data/registry';
 import { useAppState } from '../lib/store';
 import { CellArt, NeuralArt } from './Home';
+import BackButton from '../components/BackButton';
 
 export default function BookPage({ bookId }: { bookId: BookId }) {
   const book = books[bookId];
@@ -12,6 +13,9 @@ export default function BookPage({ bookId }: { bookId: BookId }) {
   const other = books[bookId === 'grade8' ? 'grade10' : 'grade8'];
   return (
     <div className={`page book-page card-${bookId}`}>
+      <div className="page-top">
+        <BackButton fallback="/" />
+      </div>
       <header className="book-head">
         {bookId === 'grade8' ? <NeuralArt /> : <CellArt />}
         <div>

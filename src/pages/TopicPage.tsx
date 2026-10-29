@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import type { BookId, Section, Topic } from '../types';
 import { books } from '../data/books';
 import { getNeighbours, getTopicBySlug, topicLabel, topicPath } from '../data/registry';
@@ -9,6 +9,7 @@ import { HL, HighlightArea } from '../features/highlights/Highlights';
 import Interactive from '../features/interactives';
 import Quiz from '../features/quiz/Quiz';
 import MotifArt from '../components/MotifArt';
+import BackButton from '../components/BackButton';
 import NotFound from './NotFound';
 
 const Viewer = lazy(() => import('../features/three/Viewer'));
@@ -86,9 +87,24 @@ export default function TopicPage({ bookId }: { bookId: BookId }) {
   const topic = getTopicBySlug(bookId, slug);
   const done = useAppState((s) => (topic ? s.books[bookId].completedTopics.includes(topic.key) : false));
 
+  const { hash } = useLocation();
+
   useEffect(() => {
     if (topic) actions.visit(topic.key);
   }, [topic]);
+
+  // Arriving from Belgilanganlar: bring the exact highlight into view and briefly emphasise it.
+  useEffect(() => {
+    if (!hash.startsWith('#hl-')) return;
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(decodeURIComponent(hash.slice(1)));
+      if (!el) return;
+      el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      el.classList.add('hl-flash');
+      window.setTimeout(() => el.classList.remove('hl-flash'), 1800);
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [hash, topic?.key]);
 
   if (!topic) return <NotFound />;
   const book = books[bookId];
@@ -104,6 +120,9 @@ export default function TopicPage({ bookId }: { bookId: BookId }) {
 
   return (
     <article className={`page topic motif-${topic.theme.motif}`} style={style} key={topic.key}>
+      <div className="page-top">
+        <BackButton fallback={book.route} />
+      </div>
       <nav aria-label="Yo‘l" className="crumbs">
         <Link to="/">Kitoblar</Link> <span aria-hidden="true">/</span> <Link to={book.route}>{book.title}</Link> <span aria-hidden="true">/</span>{' '}
         <span aria-current="page">{topicLabel(topic)}</span>
@@ -129,7 +148,6 @@ export default function TopicPage({ bookId }: { bookId: BookId }) {
 
         {topic.scene && (
           <section className="lesson-section scene-section" aria-label="Interaktiv 3D model">
-            <h2>{topic.scene.title}</h2>
             <Suspense fallback={<div className="viewer-loading">3D model yuklanmoqda…</div>}>
               <Viewer scene={topic.scene} />
             </Suspense>
