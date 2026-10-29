@@ -144,11 +144,56 @@ Real-device performance on an iPhone 11 has not been measured.
 
 ## Highlights
 
-Highlights are created only by the learner: select text in a lesson block, then tap "Belgilash".
-- **What can be highlighted:** only lesson text blocks (`data-hl-block`); quiz answers, navigation and 3D controls cannot be.
-- **What is stored:** the record keeps the book id, topic key, block id, exact text and offsets. If the text shifts, the highlight re-anchors by its exact text.
-- **Saved list:** each highlight appears in **Belgilanganlar** immediately, which offers search, grade and lesson filters, dates, deletion, and a link to the exact source (`/8-sinf/41#hl-…`). The link scrolls to the mark and briefly emphasises it.
-- **Colours:** light and dark mode use separate tokens (`--hl-bg`, `--hl-edge`, `--hl-text`).
+Highlights are chosen by the learner; nothing is saved before **Belgilash** is pressed. The engine lives in `src/features/highlights/` and is shared by both books.
+- **Choosing words.** Double-click a word on desktop, or double-tap it on a phone (two taps on the same word within 350 ms; a moving finger counts as scrolling, so the page scrolls normally). Each word is added to the selection, and words can come from several paragraphs. A second double-click removes a word. Dragging or keyboard text selection also works and is added to the same selection.
+- **Action bar.** A bottom bar shows `N ta so‘z tanlandi · Bekor qilish · Belgilash`. It is portalled to `<body>` above the safe area. Its visibility comes from the selection state, not from the browser's text selection, so it does not vanish while words are selected (including during scrolling).
+- **Saving.** One Belgilash saves the whole selection as one group. Consecutive words merge into a phrase; non-adjacent words stay separate segments, and the words between them are never highlighted. The selection clears only after storage accepts the write. On failure it stays, so the learner can retry. Leaving the lesson discards an unsaved selection.
+- **Words.** Tokens come from `Intl.Segmenter`, with a Unicode regex fallback. O‘/g‘, apostrophes and hyphenated terms stay one word, and punctuation is never a word.
+- **Stored record.** It keeps the book, topic, block, exact text, offsets, optional `prefix`/`suffix` context and a `groupId`. Repeated text is restored to the right occurrence by context. Highlights saved before this version have no group or context and still work as single items. Marks never nest. Double-clicking an already saved word offers its removal instead of duplicating it.
+- **Saved list.** **Belgilanganlar** shows each group as one item (segments separated by “…”), with grade, lesson, date, search and filters. Deleting there or in the lesson updates both places, because there is one source of truth. **Mavzuga qaytish** scrolls to the exact mark and briefly emphasises it.
+- **Colours.** Light and dark mode have separate tokens. Saved marks use honey/amber; words still being chosen use an outlined indigo tint.
+
+## Installable app and offline use
+
+The site is an installable PWA. After one online visit it keeps working without internet.
+
+**Installing**
+- **Android / Chrome / Edge, desktop or phone:** tap **Ilovani o‘rnatish** on the home page. It opens the browser's own install dialog, which only appears when the browser allows installation.
+- **iPhone / iPad (Safari):** the same button opens a short guide. Tap **Ulashish**, then **Bosh ekranga qo‘shish**, then **Qo‘shish**. iOS has no automatic install prompt.
+- The card hides once the app is installed or running standalone. **Keyinroq** hides it for 14 days.
+
+**What works offline:** home, both books, every lesson text, quizzes (scoring, explanations, feedback audio), progress, highlights and Belgilanganlar, theme, all 3D models, the virtual microscope and the interactive exercises.
+
+**How it is cached** (`pwa/sw.js`, generated per build by `vite.config.ts`):
+- `offline-manifest.json` is built from the real production output, so there is no hand-written asset list.
+- **Core** (about 2.4 MB) is precached when the service worker installs: app shell, every page and quiz chunk, the 3D framework, CSS, icons and quiz audio.
+- **Offline pack** (about 90 KB): the lazily loaded 3D-scene and interactive chunks. **Offline uchun tayyorlash** downloads it with real per-group progress and supports cancel and retry. Files visited online are also cached.
+- Navigation always returns the cached app shell of the same version, so a deep link such as `/8-sinf/42` opens offline. Content that was never saved shows a calm “Internet mavjud emas” message instead of a browser error.
+- Audio byte-range requests are answered from the cache (206), as Safari requires for media.
+- Only same-origin GET requests are cached; third-party requests are never stored.
+
+**Updates and data:** each build has its own cache version.
+- A new version installs in the background, and **Yangi versiya mavjud → Yangilash** activates it. The page never reloads in the middle of a lesson or quiz.
+- Old caches are deleted after activation; unchanged offline-pack files are carried over.
+- If the learner had prepared offline use, a changed or cleared pack is refilled automatically when online.
+- Progress, highlights and settings live in `localStorage` and are never touched by cache cleanup. **Offline materiallarni o‘chirish** removes downloaded files only.
+
+**First visit:** offline use starts after the app has been opened online once; a browser cannot download it without a connection.
+
+**Tested** (production build, Playwright Chromium on Windows):
+- Chrome reports no installability errors.
+- The service worker precaches core, and the offline pack reaches “Offline foydalanishga tayyor”.
+- With the network off: a hard load of a deep lesson route works, all 10 lesson 3D models render, DNA stages play, and the microscope works.
+- A full quiz played all three recordings from cache and saved its score.
+- Highlights work end to end: save, Belgilanganlar and return to the lesson.
+- A cold start in a new tab works offline, and every route opens.
+- Updating to a new version kept progress, highlights and theme.
+- Online/offline flapping stays stable: one service-worker registration and one install card.
+- After the caches were cleared, they were rebuilt.
+
+**Not tested:**
+- Installation was not completed in a real browser window.
+- Real iPhone 11 device testing was not performed; the iOS guide was checked with an iPhone user agent only.
 
 ## Navigation
 
