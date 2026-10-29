@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Biologiya — 8 va 10-sinf",
+  "short_name": "Biologiya",
+  "description": "8-sinf va 10-sinf biologiya darsliklari asosidagi interaktiv o‘quv ilovasi: darslar, 3D modellar, testlar. Internet bo‘lmasa ham ishlaydi.",
+  "lang": "uz",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f2ee",
+  "theme_color": "#4b5bb0",
+  "categories": ["education"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
