@@ -10,6 +10,10 @@ declare global {
       /** Advance the render loop `n` frames ~`ms` apart (works while the browser throttles rAF). */
       step: (n: number, ms?: number) => Promise<number>;
       /** Hotspot id → tappable screen area (px² sampled) and the most central client point that hits it. */
+      /** Camera position relative to the orbit target, and its distance. */
+      cam: () => { off: [number, number, number]; dist: number };
+      /** Normalised screen bounds [x0, y0, x1, y1] of everything tappable (0…1 = inside the canvas). */
+      extent: (grid?: number) => [number, number, number, number] | null;
       targets: (grid?: number) => Record<string, { area: number; x: number; y: number }>;
     };
   }
@@ -22,11 +26,21 @@ declare global {
 export default function QaSheet({ controls }: { controls: React.RefObject<OrbitImpl | null> }) {
   const { gl, scene, camera, advance } = useThree();
   useEffect(() => {
+    let lastExtent: [number, number, number, number] | null = null;
     window.__bioQA = {
+      cam: () => {
+        const o = camera.position.clone().sub(controls.current?.target ?? new THREE.Vector3());
+        return { off: o.toArray() as [number, number, number], dist: o.length() };
+      },
+      extent: (grid = 10) => {
+        window.__bioQA!.targets(grid); // the scan records the bounds
+        return lastExtent;
+      },
       targets: (grid = 12) => {
         const rect = gl.domElement.getBoundingClientRect();
         const ray = new THREE.Raycaster();
         const hits: Record<string, [number, number][]> = {};
+        let [x0, y0, x1, y1] = [Infinity, Infinity, -Infinity, -Infinity];
         const shown = (o: THREE.Object3D | null): boolean => !o || (o.visible && shown(o.parent));
         for (let y = grid / 2; y < rect.height; y += grid)
           for (let x = grid / 2; x < rect.width; x += grid) {
@@ -38,9 +52,11 @@ export default function QaSheet({ controls }: { controls: React.RefObject<OrbitI
               if (!id) continue; // like R3F, objects without a handler don't take the tap
               if (u.passThrough && ray.intersectObjects(scene.children, true).some((k) => k.distance > h.distance && k.object !== h.object && k.object.userData.part && shown(k.object))) continue;
               (hits[id] ??= []).push([x, y]);
+              [x0, y0, x1, y1] = [Math.min(x0, x), Math.min(y0, y), Math.max(x1, x), Math.max(y1, y)];
               break;
             }
           }
+        lastExtent = x0 === Infinity ? null : [x0 / rect.width, y0 / rect.height, x1 / rect.width, y1 / rect.height];
         return Object.fromEntries(
           Object.entries(hits).map(([id, pts]) => {
             const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;

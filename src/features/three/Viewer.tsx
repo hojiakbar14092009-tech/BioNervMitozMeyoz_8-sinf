@@ -71,36 +71,73 @@ function FirstFrames({ onReady }: { onReady: () => void }) {
 type RigRequest = { kind: 'preset'; dir: [number, number, number]; n: number } | { kind: 'zoom'; factor: number; n: number } | null;
 
 /** Smooth camera moves for presets and zoom buttons; any user drag cancels them. */
+/** Smallest distance (≥ `from`) at which the model's labelled parts fit the frustum when seen along `dir`. */
+function fitAlong(camera: THREE.PerspectiveCamera, scene: THREE.Object3D, target: THREE.Vector3, dir: THREE.Vector3, from: number, max: number) {
+  const box = new THREE.Box3();
+  scene.traverse((o) => {
+    if (o.visible && (o.userData.part || o.userData.partOf)) box.expandByObject(o);
+  });
+  if (box.isEmpty()) return from;
+  const corners = [0, 1, 2, 3, 4, 5, 6, 7].map((i) => new THREE.Vector3(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z));
+  const cam = camera.clone();
+  const fits = (d: number) => {
+    cam.position.copy(dir).multiplyScalar(d).add(target);
+    cam.lookAt(target);
+    cam.updateMatrixWorld();
+    return corners.every((p) => {
+      const q = p.clone().project(cam);
+      return Math.abs(q.x) < 0.97 && Math.abs(q.y) < 0.97 && q.z < 1;
+    });
+  };
+  let d = from;
+  while (!fits(d) && d < max) d = Math.min(max, d * 1.06);
+  return d;
+}
+
+type Glide = { from: THREE.Vector3; axis: THREE.Vector3; angle: number; d0: number; d1: number; t: number; time: number };
+
 function CameraRig({ request, controls, min, max }: { request: RigRequest; controls: React.RefObject<OrbitImpl | null>; min: number; max: number }) {
-  const { camera } = useThree();
-  const goal = useRef<THREE.Vector3 | null>(null);
+  const { camera, scene } = useThree();
+  const glide = useRef<Glide | null>(null);
   useEffect(() => {
     const c = controls.current;
     if (!request || !c) return;
     const offset = camera.position.clone().sub(c.target);
     const dist = offset.length();
-    if (request.kind === 'preset') goal.current = new THREE.Vector3(...request.dir).normalize().multiplyScalar(dist).add(c.target);
-    else goal.current = offset.setLength(THREE.MathUtils.clamp(dist * request.factor, min, max)).add(c.target);
-  }, [request, camera, controls, min, max]);
+    let dir = offset.clone().normalize();
+    let d = THREE.MathUtils.clamp(dist * (request.kind === 'zoom' ? request.factor : 1), min, max);
+    if (request.kind === 'preset') {
+      // keep the goal inside the orbit's polar limits (e.g. "Yuqori"), otherwise the controls clamp it every frame and it never lands
+      const s = new THREE.Spherical().setFromVector3(new THREE.Vector3(...request.dir));
+      s.phi = THREE.MathUtils.clamp(s.phi, c.minPolarAngle + 0.01, c.maxPolarAngle - 0.01);
+      dir = new THREE.Vector3().setFromSpherical(s.set(1, s.phi, s.theta));
+      d = camera instanceof THREE.PerspectiveCamera ? fitAlong(camera, scene, c.target, dir, dist, max) : dist;
+    }
+    const from = offset.clone().normalize();
+    const angle = from.angleTo(dir);
+    // opposite views (Old → Orqa) turn about the vertical axis rather than through the model
+    const axis = new THREE.Vector3().crossVectors(from, dir);
+    if (axis.lengthSq() < 1e-6) axis.set(0, 1, 0);
+    glide.current = { from, axis: axis.normalize(), angle, d0: dist, d1: d, t: 0, time: 0.45 + 0.35 * (angle / Math.PI) };
+  }, [request, camera, scene, controls, min, max]);
   useEffect(() => {
     const c = controls.current;
     if (!c) return;
-    const stop = () => (goal.current = null);
+    const stop = () => (glide.current = null);
     c.addEventListener('start', stop);
     return () => c.removeEventListener('start', stop);
   }, [controls]);
   useFrame((_, dt) => {
     const c = controls.current;
-    if (!goal.current || !c) return;
-    // slerp-like move on the orbit so presets glide around the model instead of cutting through it
-    const from = camera.position.clone().sub(c.target);
-    const to = goal.current.clone().sub(c.target);
-    const k = 1 - Math.exp(-dt * 5);
-    const dir = from.clone().normalize().lerp(to.clone().normalize(), k).normalize();
-    const len = THREE.MathUtils.lerp(from.length(), to.length(), k);
-    camera.position.copy(dir.multiplyScalar(len).add(c.target));
+    const g = glide.current;
+    if (!g || !c) return;
+    // fixed-duration ease-in-out along the orbit: gentle start and landing at any frame rate
+    g.t = Math.min(1, g.t + Math.min(dt, 1 / 20) / g.time);
+    const e = g.t < 0.5 ? 4 * g.t ** 3 : 1 - (-2 * g.t + 2) ** 3 / 2;
+    const dir = g.from.clone().applyAxisAngle(g.axis, g.angle * e);
+    camera.position.copy(dir.multiplyScalar(THREE.MathUtils.lerp(g.d0, g.d1, e)).add(c.target));
     c.update();
-    if (camera.position.distanceTo(goal.current) < 0.01) goal.current = null;
+    if (g.t >= 1) glide.current = null;
   });
   return null;
 }
@@ -119,6 +156,14 @@ function FitWidth({ span, halfHeight, controls }: { span?: number; halfHeight?: 
     c.update();
     c.saveState();
   }, [span, halfHeight, size.width, size.height, camera, controls]);
+  return null;
+}
+
+/** OrbitControls turns a fixed angle per frame; scale it by the real frame time so a turn takes the same time at 30, 60 or 120 Hz. */
+function AutoRotateClock({ speed, controls }: { speed: number; controls: React.RefObject<OrbitImpl | null> }) {
+  useFrame((_, dt) => {
+    if (controls.current) controls.current.autoRotateSpeed = speed * Math.min(dt * 60, 4);
+  }, -2);
   return null;
 }
 
@@ -311,6 +356,7 @@ export default function Viewer({ scene: base }: { scene: SceneConfig }) {
                   }}
                 />
                 {import.meta.env.DEV && <QaSheet controls={controls} />}
+                <AutoRotateClock speed={cfg.autoSpeed} controls={controls} />
                 <FitWidth span={cfg.span} halfHeight={cfg.halfHeight} controls={controls} />
                 <CameraRig request={rig} controls={controls} min={cfg.minDistance} max={cfg.maxDistance} />
               </Canvas>
