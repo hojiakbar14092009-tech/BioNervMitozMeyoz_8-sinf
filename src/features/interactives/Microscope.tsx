@@ -109,10 +109,20 @@ export function drawCell(ctx: CanvasRenderingContext2D, c: Cell, detail: boolean
   cellPath(ctx, c);
   ctx.fillStyle = grainPattern(ctx) ?? '#efc6dc';
   ctx.fill();
+  const { x, y, w, h, seed } = c;
+  // uneven stain uptake, as in a real squash preparation
+  ctx.fillStyle = `rgba(122,40,112,${(0.03 + rnd(seed, 11) * 0.13).toFixed(3)})`;
+  ctx.fill();
   ctx.lineWidth = selected ? 3 : 2;
   ctx.strokeStyle = selected ? '#3a7bd5' : '#a77fbf';
   ctx.stroke();
-  const { x, y, w, h, seed } = c;
+  // nuclei sit off-centre and division planes tilt slightly from cell to cell
+  if (c.phase <= 1) ctx.translate((rnd(seed, 12) - 0.5) * w * 0.2, (rnd(seed, 13) - 0.5) * h * 0.16);
+  else {
+    ctx.translate(x, y);
+    ctx.rotate((rnd(seed, 14) - 0.5) * 0.3);
+    ctx.translate(-x, -y);
+  }
   const chrom = '#3d1556';
   if (!detail) {
     if (c.phase === 0 || c.phase === 1) {
