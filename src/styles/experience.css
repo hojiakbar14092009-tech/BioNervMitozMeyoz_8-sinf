@@ -539,3 +539,233 @@ body:has(.hl-bar) main {
   background: inherit;
   z-index: 2;
 }
+
+/* ===================== installable app & offline mode ===================== */
+.pwa-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin: 0 0 18px;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--elev);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.pwa-card h2 {
+  font-size: 1.08rem;
+  margin: 0 0 4px;
+}
+.pwa-card p {
+  margin: 0 0 10px;
+}
+.pwa-card-body {
+  flex: 1;
+  min-width: 0;
+}
+.pwa-icon {
+  flex: none;
+  border-radius: 12px;
+}
+.offline-card {
+  margin-top: 18px;
+}
+.offline-ok {
+  color: var(--ok);
+  font-weight: 700;
+}
+.offline-err {
+  color: var(--bad);
+  font-weight: 700;
+}
+.offline-rows {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 4px;
+}
+.offline-rows li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.offline-progress {
+  position: relative;
+  height: 22px;
+  border-radius: 11px;
+  background: var(--surface-2);
+  overflow: hidden;
+  margin: 0 0 12px;
+}
+.offline-progress span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+.offline-progress b {
+  position: relative;
+  display: block;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 22px;
+  color: var(--text);
+  mix-blend-mode: normal;
+}
+.offline-confirm {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.offline-missing {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+}
+.offline-missing p {
+  margin: 6px 0 10px;
+}
+.pwa-card .btn,
+.offline-missing .btn {
+  min-height: 44px;
+}
+
+/* connectivity hint in the header: calm, not an alarm */
+.net-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.net-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.net-pill.off {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.net-pill.off .net-dot {
+  background: #c9952f;
+}
+@media (max-width: 420px) {
+  .net-pill.on .net-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .net-pill.on {
+    padding: 4px;
+  }
+}
+
+/* iOS “Add to Home Screen” guide */
+.pwa-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgb(0 0 0 / 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.pwa-sheet {
+  width: min(480px, 100vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--elev);
+  color: var(--text);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 40px rgb(0 0 0 / 0.3);
+  animation: sheetUp 0.22s ease-out;
+}
+.pwa-sheet h2 {
+  margin: 0 0 12px;
+}
+.pwa-sheet h2:focus {
+  outline: none;
+}
+.pwa-sheet .btn {
+  width: 100%;
+  min-height: 48px;
+}
+.pwa-steps {
+  list-style: none;
+  counter-reset: s;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 12px;
+}
+.pwa-steps li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.pwa-step-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--surface-2);
+  color: var(--accent);
+  font-weight: 700;
+}
+@keyframes sheetUp {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+/* new version available */
+.update-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  top: calc(64px + env(safe-area-inset-top));
+  z-index: 50;
+  width: min(480px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 14px;
+  background: var(--elev);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  font-weight: 600;
+}
+.update-bar .row-actions {
+  margin: 0;
+}
+.update-bar .btn {
+  min-height: 40px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pwa-sheet,
+  .offline-progress span {
+    animation: none;
+    transition: none;
+  }
+}

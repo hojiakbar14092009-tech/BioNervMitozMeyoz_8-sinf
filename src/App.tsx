@@ -3,6 +3,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import NotFound from './pages/NotFound';
+import { OfflineMissing } from './features/pwa/OfflineSafe';
 
 const BookPage = lazy(() => import('./pages/BookPage'));
 const TopicPage = lazy(() => import('./pages/TopicPage'));
@@ -15,6 +16,12 @@ const router = createBrowserRouter(
   [
     {
       element: <Layout />,
+      // a page whose code could not be loaded (offline, not cached yet) shows a calm message, not a raw error
+      errorElement: (
+        <div className="page">
+          <OfflineMissing onRetry={() => location.reload()} />
+        </div>
+      ),
       children: [
         { path: '/', element: <Home /> },
         { path: '/8-sinf', element: wait(<BookPage bookId="grade8" />) },

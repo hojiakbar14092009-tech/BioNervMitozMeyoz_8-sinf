@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType } from 'react';
 import type { InteractiveKey } from '../../types';
+import { OfflineSafe } from '../pwa/OfflineSafe';
 
 const g8 = (name: string) => lazy(() => import('./Grade8').then((m) => ({ default: (m as unknown as Record<string, ComponentType>)[name] })));
 const g10 = (name: string) => lazy(() => import('./Grade10').then((m) => ({ default: (m as unknown as Record<string, ComponentType>)[name] })));
@@ -25,8 +26,10 @@ const MAP: Record<InteractiveKey, ComponentType> = {
 export default function Interactive({ k }: { k: InteractiveKey }) {
   const C = MAP[k];
   return (
-    <Suspense fallback={<div className="skeleton" role="status">Yuklanmoqda…</div>}>
-      <C />
-    </Suspense>
+    <OfflineSafe>
+      <Suspense fallback={<div className="skeleton" role="status">Yuklanmoqda…</div>}>
+        <C />
+      </Suspense>
+    </OfflineSafe>
   );
 }

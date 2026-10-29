@@ -3,6 +3,7 @@ import type { BookId } from '../types';
 import { bookList, books } from '../data/books';
 import { getTopic, topicLabel, topicPath, topicsByBook } from '../data/registry';
 import { useAppState } from '../lib/store';
+import { InstallCard, OfflinePanel } from '../features/pwa/PwaUI';
 
 export function NeuralArt() {
   return (
@@ -83,11 +84,13 @@ export default function Home() {
           <span aria-hidden="true">→</span>
         </Link>
       )}
+      <InstallCard />
       <div className="book-grid">
         {bookList.map((b) => (
           <BookCard key={b.id} id={b.id} />
         ))}
       </div>
+      <OfflinePanel />
       <p className="muted small center">
         <Link to="/belgilanganlar">✎ Belgilangan matnlar</Link>
       </p>

@@ -7,6 +7,7 @@ import { actions, useAppState } from '../lib/store';
 import { stopAudio } from '../lib/audio';
 import { useToast } from '../lib/toast';
 import Intro, { BioMark } from './Intro';
+import { OfflineStatus, UpdateBar } from '../features/pwa/PwaUI';
 
 export function bookFromPath(path: string): BookId | null {
   if (path.startsWith(books.grade8.route)) return 'grade8';
@@ -121,6 +122,7 @@ export default function Layout() {
             </Link>
           )}
           <div className="topbar-actions">
+            <OfflineStatus />
             <button type="button" className="icon-btn" aria-label={audio ? 'Ovozni o‘chirish' : 'Ovozni yoqish'} aria-pressed={audio} onClick={() => actions.setAudio(!audio)}>
               {audio ? '🔊' : '🔇'}
             </button>
@@ -154,6 +156,7 @@ export default function Layout() {
         </main>
       </div>
       <Toaster />
+      <UpdateBar />
       <Intro />
       <ScrollRestoration />
       <footer className="site-foot muted small">
