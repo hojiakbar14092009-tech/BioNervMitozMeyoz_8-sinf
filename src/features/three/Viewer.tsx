@@ -361,7 +361,7 @@ export default function Viewer({ scene: base }: { scene: SceneConfig }) {
                     idle.current = window.setTimeout(() => setInteracting(false), 6000);
                   }}
                 />
-                {import.meta.env.DEV && <QaSheet controls={controls} />}
+                {(import.meta.env.DEV || import.meta.env.MODE === 'qa') && <QaSheet controls={controls} />}
                 <AutoRotateClock speed={cfg.autoSpeed} controls={controls} />
                 <FitWidth span={cfg.span} halfHeight={cfg.halfHeight} controls={controls} />
                 <CameraRig request={rig} controls={controls} min={cfg.minDistance} max={cfg.maxDistance} />

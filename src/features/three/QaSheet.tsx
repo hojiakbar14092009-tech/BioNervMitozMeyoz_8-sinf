@@ -10,6 +10,8 @@ declare global {
       /** Advance the render loop `n` frames ~`ms` apart (works while the browser throttles rAF). */
       step: (n: number, ms?: number) => Promise<number>;
       /** Hotspot id → tappable screen area (px² sampled) and the most central client point that hits it. */
+      /** Run n full frames (scene updates + render), forcing the GPU to finish each; ms per frame (median, p95, max). */
+      bench: (n?: number) => { median: number; p95: number; max: number; px: [number, number]; calls: number; tris: number };
       /** Camera position relative to the orbit target, and its distance. */
       cam: () => { off: [number, number, number]; dist: number };
       /** Normalised screen bounds [x0, y0, x1, y1] of everything tappable (0…1 = inside the canvas). */
@@ -28,6 +30,20 @@ export default function QaSheet({ controls }: { controls: React.RefObject<OrbitI
   useEffect(() => {
     let lastExtent: [number, number, number, number] | null = null;
     window.__bioQA = {
+      bench: (n = 120) => {
+        const ctx = gl.getContext();
+        const px = new Uint8Array(4);
+        const times: number[] = [];
+        for (let i = 0; i < n; i++) {
+          const t = performance.now();
+          advance(t);
+          ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, px); // blocks until the frame is done
+          times.push(performance.now() - t);
+        }
+        times.sort((a, b) => a - b);
+        const r = (x: number) => +x.toFixed(2);
+        return { median: r(times[n >> 1]), p95: r(times[Math.floor(n * 0.95)]), max: r(times[n - 1]), px: [gl.domElement.width, gl.domElement.height], calls: gl.info.render.calls, tris: gl.info.render.triangles };
+      },
       cam: () => {
         const o = camera.position.clone().sub(controls.current?.target ?? new THREE.Vector3());
         return { off: o.toArray() as [number, number, number], dist: o.length() };
