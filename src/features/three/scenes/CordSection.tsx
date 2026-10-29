@@ -56,16 +56,17 @@ export function Ganglion({ at, part, scale = 1, anchor, calloutDir }: { at: P; p
 }
 
 /** Transverse spinal-cord segment: cream white matter, inlaid butterfly grey matter, central canal. */
-export function CordSection({ depth = 1.1, ids = {}, scale = 1, anchors = false }: { depth?: number; ids?: { white?: string; grey?: string; canal?: string }; scale?: number; anchors?: boolean }) {
+export function CordSection({ depth = 1.1, ids = {}, scale = 1, anchors = false, natural = false }: { depth?: number; ids?: { white?: string; grey?: string; canal?: string }; scale?: number; anchors?: boolean; natural?: boolean }) {
   const grey = useMemo(butterfly, []);
   const outline = useMemo(() => cordOutline(0.86, 0.7), []);
+  // `natural`: keep tissue colours even when the regions select another hotspot (reflex arc → "inter")
   return (
     <group scale={scale}>
-      <Part part={ids.white} color={ids.white ? undefined : "#efe2c6"} roughness={0.7} position={[0, 0, -depth / 2]} anchor={anchors ? [-0.62, 0.5, depth] : undefined} calloutDir={[-30, -62]}>
+      <Part part={ids.white} color={ids.white && !natural ? undefined : "#efe2c6"} roughness={0.7} position={[0, 0, -depth / 2]} anchor={anchors ? [-0.62, 0.5, depth] : undefined} calloutDir={[-30, -62]}>
         <extrudeGeometry args={[outline, { depth, bevelEnabled: true, bevelSize: 0.035, bevelThickness: 0.035, bevelSegments: 4, curveSegments: 56 }]} />
       </Part>
       {/* grey matter inlaid flush with both cut faces so it reads from front and back */}
-      <Part part={ids.grey} color={ids.grey ? undefined : "#9b7469"} roughness={0.75} position={[0, 0, -depth / 2 - 0.042]} scale={[1.18, 1.18, 1]} anchor={anchors ? [-0.3, 0.45, depth + 0.08] : undefined} calloutDir={[-60, -55]}>
+      <Part part={ids.grey} color={ids.grey && !natural ? undefined : "#9b7469"} roughness={0.75} position={[0, 0, -depth / 2 - 0.042]} scale={[1.18, 1.18, 1]} anchor={anchors ? [-0.3, 0.45, depth + 0.08] : undefined} calloutDir={[-60, -55]}>
         <extrudeGeometry args={[grey, { depth: depth + 0.084, bevelEnabled: false, curveSegments: 22 }]} />
       </Part>
       <Part part={ids.canal} color={ids.canal ? undefined : "#4e3358"} rotation={[Math.PI / 2, 0, 0]} position={[0, -0.024, 0]} anchor={anchors ? [0, 0.3, 0] : undefined} calloutDir={[-70, 40]} roughness={0.3}>
