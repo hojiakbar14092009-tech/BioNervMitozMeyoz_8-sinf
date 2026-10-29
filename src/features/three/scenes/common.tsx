@@ -39,6 +39,8 @@ export interface PartProps extends MeshProps {
   sheen?: number;
   /** Whether taps hit this mesh; enclosing shells set false so inner parts stay tappable. */
   pickable?: boolean;
+  /** Translucent shell: a tap goes to any labelled structure behind it, and selects the shell only where nothing is. */
+  passThrough?: boolean;
   /** Local position of this structure's callout point. One Part per structure should carry it. */
   anchor?: [number, number, number];
   /** Screen-space offset of the callout box from its point (px). */
@@ -52,6 +54,28 @@ export interface PartProps extends MeshProps {
 }
 
 const noRaycast = () => null;
+
+/** Invisible, slightly larger tap target for a structure too small to hit comfortably on a phone. */
+export function HitProxy({ part, radius, length, ...mesh }: { part?: string; radius: number; /** cylinder along z instead of a sphere */ length?: number } & MeshProps) {
+  const { selected, select } = useSelection();
+  if (!part) return null;
+  return (
+    <group {...(mesh as ThreeElements['group'])}>
+      <mesh
+        rotation={length ? [Math.PI / 2, 0, 0] : undefined}
+        userData={{ part }}
+        onClick={(e) => {
+          if (e.delta > 8) return;
+          e.stopPropagation();
+          select(selected === part ? null : part);
+        }}
+      >
+        {length ? <cylinderGeometry args={[radius, radius, length, 16]} /> : <sphereGeometry args={[radius, 12, 8]} />}
+        <meshBasicMaterial colorWrite={false} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
 
 /** Callout: point marker + leader line + named box, as in the reference sheets. */
 export function Callout({ part, dir, on, label, color, select }: { part: string; dir: [number, number]; on: boolean; label: string; color: string; select: (id: string | null) => void }) {
@@ -105,7 +129,7 @@ export function Callout({ part, dir, on, label, color, select }: { part: string;
 }
 
 /** A biological structure: soft PBR material (standard shader — fast to compile on phones), tap-to-select, restrained emphasis. */
-export function Part({ part, color, opacity = 1, roughness = 0.62, sheen = 0.45, pickable = true, anchor, calloutDir, clip, internal, emissiveBoost = 0, children, ...mesh }: PartProps) {
+export function Part({ part, color, opacity = 1, roughness = 0.62, sheen = 0.45, pickable = true, passThrough = false, anchor, calloutDir, clip, internal, emissiveBoost = 0, children, ...mesh }: PartProps) {
   const { selected, select, colors, labels, anchors, showLabels, clipPlane } = useSelection();
   const c = color ?? (part ? colors[part] : undefined) ?? PALETTE.tissue;
   const on = !!part && selected === part;
@@ -116,6 +140,7 @@ export function Part({ part, color, opacity = 1, roughness = 0.62, sheen = 0.45,
   const onClick = part
     ? (e: ThreeEvent<MouseEvent>) => {
         if (e.delta > 8) return; // a drag that rotated the model is not a tap
+        if (passThrough && e.intersections.some((i) => i.object !== e.object && i.distance > e.distance && i.object.userData.part)) return; // let it reach the inner structure
         e.stopPropagation();
         select(on ? null : part);
       }
@@ -124,6 +149,7 @@ export function Part({ part, color, opacity = 1, roughness = 0.62, sheen = 0.45,
   return (
     <mesh
       {...mesh}
+      userData={{ part, passThrough }}
       raycast={pickable && part ? undefined : noRaycast}
       onClick={onClick}
       onPointerOver={part ? (e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; } : undefined}
@@ -266,6 +292,7 @@ export function InstancedSpheres({ part, color, colors: perColors, points, radii
       <instancedMesh
         ref={ref}
         args={[geo, undefined, points.length]}
+        userData={{ part }}
         raycast={pickable && part ? undefined : noRaycast}
         onClick={
           part

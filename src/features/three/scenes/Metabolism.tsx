@@ -138,7 +138,7 @@ export default function Metabolism({ stage, reduced }: SceneProps) {
       <mesh geometry={cell} raycast={() => null}>
         <Membrane color="#8fb7c2" rim="#e3f4ff" opacity={0.07} strength={1.05} />
       </mesh>
-      <Part part="sitozol" geometry={cell} opacity={0.035} pickable={false} anchor={[-1.25, 1.2, 0.6]} calloutDir={[-40, -50]} />
+      <Part part="sitozol" geometry={cell} opacity={0.035} passThrough anchor={[-1.25, 1.2, 0.6]} calloutDir={[-40, -50]} />
       <Part geometry={nucleus} position={[-1.0, -0.15, -0.55]} color="#8a72c4" opacity={0.85} roughness={0.5} pickable={false} />
       {MITOS.map((m, i) => (
         <Mitochondrion key={i} {...m} label={i === 0} />

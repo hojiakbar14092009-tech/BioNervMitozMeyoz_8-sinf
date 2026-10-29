@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { mergeBufferGeometries } from 'three-stdlib';
 import type { SceneProps } from '../Viewer';
-import { Part, curve, rand, taperedTube, useOrganic, useSelection } from './common';
+import { HitProxy, Part, curve, rand, taperedTube, useOrganic, useSelection } from './common';
 import { CordSection, Ganglion } from './CordSection';
 import { muscleProfile } from './shapes';
 
@@ -122,7 +122,7 @@ function Muscle() {
   return (
     <group onClick={(e) => { if (e.delta > 8) return; e.stopPropagation(); select(on ? null : 'effector'); }}>
       {fibres.map((f, i) => (
-        <mesh key={i} position={[f.x, 0, f.z]} scale={[f.s, 1, f.s]}>
+        <mesh key={i} position={[f.x, 0, f.z]} scale={[f.s, 1, f.s]} userData={{ part: 'effector' }}>
           <latheGeometry args={[lathe, 24]} />
           <meshStandardMaterial key={dim ? 't' : 'o'} map={stripes} color="#e7a49b" roughness={0.55} emissive={on ? '#c85a4c' : '#000'} emissiveIntensity={on ? 0.3 : 0} transparent={dim} opacity={dim ? 0.3 : 1} />
         </mesh>
@@ -230,6 +230,7 @@ export default function ReflexArc({ scene, pulse, reduced, report }: SceneProps)
       <Skin />
       <Part part="receptor" geometry={corpuscle} position={SENSORY[0]} scale={[1.25, 0.75, 0.8]} anchor={[0, 0.2, 0]} calloutDir={[-60, -40]} emissiveBoost={0.25} />
       <Part part="receptor" geometry={geo.endings} />
+      <HitProxy part="receptor" radius={0.17} position={SENSORY[0]} />
 
       <group position={CORD}>
         <CordSection depth={0.9} scale={0.62} ids={{ white: 'inter', grey: 'inter' }} natural />

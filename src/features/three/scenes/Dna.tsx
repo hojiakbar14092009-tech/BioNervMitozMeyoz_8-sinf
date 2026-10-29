@@ -56,6 +56,7 @@ function Backbone({ side, open, part }: { side: -1 | 1; open: React.RefObject<Fl
   return (
     <mesh
       ref={mesh}
+      userData={{ part }}
       onClick={(e) => {
         if (e.delta > 8) return;
         e.stopPropagation();

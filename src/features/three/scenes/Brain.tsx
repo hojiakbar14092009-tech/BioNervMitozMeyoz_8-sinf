@@ -94,16 +94,19 @@ function Hemisphere({ side, hotspots, lobeColors }: { side: 1 | -1; hotspots: st
 
   if (cut) return null;
 
+  const partOf = (vertex: number) => {
+    const lobe = lobes[vertex];
+    return side === 1 && hotspots.includes(`${lobe}-left`) ? `${lobe}-left` : hotspots.includes(lobe) ? lobe : hotspots.includes('hemispheres') ? 'hemispheres' : null;
+  };
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 8 || !e.face) return;
     e.stopPropagation();
-    const lobe = lobes[e.face.a];
-    const id = side === 1 && hotspots.includes(`${lobe}-left`) ? `${lobe}-left` : hotspots.includes(lobe) ? lobe : hotspots.includes('hemispheres') ? 'hemispheres' : null;
+    const id = partOf(e.face.a);
     if (id) select(selected === id ? null : id);
   };
 
   return (
-    <mesh geometry={geometry} position={[0, 0.25, side * 0.36]} onClick={onClick} onPointerOver={() => (document.body.style.cursor = 'pointer')} onPointerOut={() => (document.body.style.cursor = '')}>
+    <mesh geometry={geometry} position={[0, 0.25, side * 0.36]} userData={{ partOf }} onClick={onClick} onPointerOver={() => (document.body.style.cursor = 'pointer')} onPointerOut={() => (document.body.style.cursor = '')}>
       <meshStandardMaterial
         key={inner ? 't' : 'o'}
         vertexColors

@@ -49,7 +49,7 @@ function Cell({ half, pinch, x = 0 }: { half: number; pinch: number; x?: number 
   const key = `${half.toFixed(3)}|${pinch.toFixed(3)}`;
   const [outer, inner] = useMemo(() => {
     const o = new THREE.LatheGeometry(rodProfile(half, pinch), 48).rotateZ(-Math.PI / 2);
-    const i = new THREE.LatheGeometry(rodProfile(half - 0.02, pinch, R - 0.04), 40).rotateZ(-Math.PI / 2);
+    const i = new THREE.LatheGeometry(rodProfile(half - 0.02, pinch, R - 0.07), 40).rotateZ(-Math.PI / 2);
     return [o, i];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
@@ -65,8 +65,8 @@ function Cell({ half, pinch, x = 0 }: { half: number; pinch: number; x?: number 
       <mesh geometry={outer} raycast={() => null}>
         <Membrane color="#5fb3a3" rim="#e2fff8" opacity={0.12} strength={1.15} />
       </mesh>
-      <Part part="membrana" geometry={outer} opacity={0.2} roughness={0.35} anchor={[-(half + R) * 0.55, R * 0.95, 0]} calloutDir={[-50, -50]} />
-      <Part part="sitoplazma" geometry={inner} opacity={0.22} roughness={0.6} pickable={false} anchor={[(half + R) * 0.45, -R * 0.6, 0.2]} calloutDir={[50, 40]} />
+      <Part part="membrana" geometry={outer} opacity={0.2} roughness={0.35} passThrough anchor={[-(half + R) * 0.55, R * 0.95, 0]} calloutDir={[-50, -50]} />
+      <Part part="sitoplazma" geometry={inner} opacity={0.22} roughness={0.6} passThrough anchor={[(half + R) * 0.45, -R * 0.6, 0.2]} calloutDir={[50, 40]} />
     </group>
   );
 }

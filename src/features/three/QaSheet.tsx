@@ -9,6 +9,8 @@ declare global {
       sheet: (opts?: { cols?: number; size?: number; polar?: number }) => string;
       /** Advance the render loop `n` frames ~`ms` apart (works while the browser throttles rAF). */
       step: (n: number, ms?: number) => Promise<number>;
+      /** Hotspot id → tappable screen area (px² sampled) and the most central client point that hits it. */
+      targets: (grid?: number) => Record<string, { area: number; x: number; y: number }>;
     };
   }
 }
@@ -21,6 +23,33 @@ export default function QaSheet({ controls }: { controls: React.RefObject<OrbitI
   const { gl, scene, camera, advance } = useThree();
   useEffect(() => {
     window.__bioQA = {
+      targets: (grid = 12) => {
+        const rect = gl.domElement.getBoundingClientRect();
+        const ray = new THREE.Raycaster();
+        const hits: Record<string, [number, number][]> = {};
+        const shown = (o: THREE.Object3D | null): boolean => !o || (o.visible && shown(o.parent));
+        for (let y = grid / 2; y < rect.height; y += grid)
+          for (let x = grid / 2; x < rect.width; x += grid) {
+            ray.setFromCamera(new THREE.Vector2((x / rect.width) * 2 - 1, -(y / rect.height) * 2 + 1), camera);
+            for (const h of ray.intersectObjects(scene.children, true)) {
+              if (!shown(h.object)) continue;
+              const u = h.object.userData;
+              const id: string | null | undefined = u.partOf && h.face ? u.partOf(h.face.a) : u.part;
+              if (!id) continue; // like R3F, objects without a handler don't take the tap
+              if (u.passThrough && ray.intersectObjects(scene.children, true).some((k) => k.distance > h.distance && k.object !== h.object && k.object.userData.part && shown(k.object))) continue;
+              (hits[id] ??= []).push([x, y]);
+              break;
+            }
+          }
+        return Object.fromEntries(
+          Object.entries(hits).map(([id, pts]) => {
+            const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+            const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+            const [bx, by] = pts.reduce((b, p) => (Math.hypot(p[0] - cx, p[1] - cy) < Math.hypot(b[0] - cx, b[1] - cy) ? p : b));
+            return [id, { area: pts.length * grid * grid, x: rect.left + bx, y: rect.top + by }];
+          }),
+        );
+      },
       step: async (n, ms = 33) => {
         const t0 = performance.now();
         for (let i = 0; i < n; i++) {

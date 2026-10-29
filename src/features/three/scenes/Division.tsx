@@ -4,7 +4,7 @@ import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
 import { compareSteps, framesFor, fusedPairs, meiosisFrames, mitosisFrames, type Chromatid, type Frame } from '../../division/stages';
-import { Callout, Membrane, Part, rand, useSelection } from './common';
+import { Callout, HitProxy, Membrane, Part, rand, useSelection } from './common';
 import Binary from './Binary';
 
 // Reference 3 (mitosis): violet/indigo chromatin. Reference 5 (meiosis): blue paternal, red maternal homologs.
@@ -105,6 +105,7 @@ function ChromatidMesh({ c, pal, reduced, anchor }: { c: Chromatid; pal: Pal; re
     <group ref={group} position={[c.x, c.y, c.z ?? 0]} rotation={[0, 0, c.rot]} scale={c.scale}>
       <mesh
         geometry={geo}
+        userData={{ part: 'xromosoma' }}
         onClick={(e) => {
           if (e.delta > 8) return;
           e.stopPropagation();
@@ -159,6 +160,7 @@ function Centrosome({ at, anchor }: { at: [number, number, number]; anchor: bool
       <Part part="sentriola" rotation={[Math.PI / 2, 0, 0]} roughness={0.4}>
         <cylinderGeometry args={[0.022, 0.022, 0.085, 12]} />
       </Part>
+      <HitProxy part="sentriola" radius={0.13} />
       <mesh raycast={() => null}>
         <sphereGeometry args={[0.075, 16, 12]} />
         <meshBasicMaterial color="#f2c46f" transparent opacity={0.18} depthWrite={false} />
@@ -247,7 +249,7 @@ function DivisionFrame({ f, pal, reduced, prefix = '' }: { f: Frame; pal: Pal; r
             <Centrosome key={k} at={[px - cell.x, py - cell.y, 0]} anchor={i === 0 && k === 1} />
           ))}
           {metaphase && cell.poles && (
-            <Part part="ekvator" pickable={false} opacity={0.14} rotation={Math.abs(cell.poles[0][0] - cell.poles[1][0]) > 0.1 ? [0, Math.PI / 2, 0] : [Math.PI / 2, 0, 0]} anchor={i === 0 ? [0, -cell.r * 0.7, 0] : undefined} calloutDir={[60, 40]}>
+            <Part part="ekvator" passThrough opacity={0.14} rotation={Math.abs(cell.poles[0][0] - cell.poles[1][0]) > 0.1 ? [0, Math.PI / 2, 0] : [Math.PI / 2, 0, 0]} anchor={i === 0 ? [0, -cell.r * 0.7, 0] : undefined} calloutDir={[60, 40]}>
               <circleGeometry args={[cell.r * 0.86, 48]} />
             </Part>
           )}

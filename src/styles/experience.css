@@ -246,6 +246,32 @@ mark.hl.hl-flash {
   border-left: 4px solid var(--a);
   margin: 0 0 8px;
 }
+/* phones: the selected structure's card is a bottom sheet, so it is visible right after a tap on the model */
+@media (max-width: 767px) {
+  .structure-info:not(.empty) {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 40;
+    margin: 0;
+    max-height: 42vh;
+    overflow: auto;
+    box-shadow: 0 10px 34px rgb(0 0 0 / 0.32);
+    animation: si-up 0.22s ease-out;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .structure-info:not(.empty) {
+      animation: none;
+    }
+  }
+}
+@keyframes si-up {
+  from {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
 .structure-info.empty {
   color: var(--muted);
   border-left-color: var(--border);

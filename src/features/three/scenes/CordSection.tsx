@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { mergeBufferGeometries } from 'three-stdlib';
-import { Part, rand, taperedTube, useOrganic } from './common';
+import { HitProxy, Part, rand, taperedTube, useOrganic } from './common';
 import { butterfly, cordOutline } from './shapes';
 
 type P = [number, number, number];
@@ -69,6 +69,7 @@ export function CordSection({ depth = 1.1, ids = {}, scale = 1, anchors = false,
       <Part part={ids.grey} color={ids.grey && !natural ? undefined : "#9b7469"} roughness={0.75} position={[0, 0, -depth / 2 - 0.042]} scale={[1.18, 1.18, 1]} anchor={anchors ? [-0.3, 0.45, depth + 0.08] : undefined} calloutDir={[-60, -55]}>
         <extrudeGeometry args={[grey, { depth: depth + 0.084, bevelEnabled: false, curveSegments: 22 }]} />
       </Part>
+      <HitProxy part={ids.canal} radius={0.11} length={depth + 0.2} position={[0, -0.024, 0]} />
       <Part part={ids.canal} color={ids.canal ? undefined : "#4e3358"} rotation={[Math.PI / 2, 0, 0]} position={[0, -0.024, 0]} anchor={anchors ? [0, 0.3, 0] : undefined} calloutDir={[-70, 40]} roughness={0.3}>
         <cylinderGeometry args={[0.058, 0.058, depth + 0.1, 24]} />
       </Part>
