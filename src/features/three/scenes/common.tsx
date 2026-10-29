@@ -127,26 +127,27 @@ export function Part({ part, color, opacity = 1, roughness = 0.62, sheen = 0.45,
 export const curve = (points: [number, number, number][]) => new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...p)));
 
 /** Tube whose radius tapers from r0 to r1 along the path — dendrites and axons narrow naturally. */
-export function useTaperedTube(points: [number, number, number][], r0: number, r1: number, segments = 40) {
-  const geo = useMemo(() => {
-    const path = curve(points);
-    const radial = 10;
-    const g = new THREE.TubeGeometry(path, segments, 1, radial, false);
-    const pos = g.attributes.position as THREE.BufferAttribute;
-    const p = new THREE.Vector3();
-    const v = new THREE.Vector3();
-    for (let i = 0; i <= segments; i++) {
-      path.getPointAt(i / segments, p);
-      const r = r0 + (r1 - r0) * Math.pow(i / segments, 0.8);
-      for (let j = 0; j <= radial; j++) {
-        const k = i * (radial + 1) + j;
-        v.fromBufferAttribute(pos, k).sub(p).multiplyScalar(r).add(p);
-        pos.setXYZ(k, v.x, v.y, v.z);
-      }
+export function taperedTube(points: [number, number, number][], r0: number, r1: number, segments = 40, radial = 10) {
+  const path = curve(points);
+  const g = new THREE.TubeGeometry(path, segments, 1, radial, false);
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const p = new THREE.Vector3();
+  const v = new THREE.Vector3();
+  for (let i = 0; i <= segments; i++) {
+    path.getPointAt(i / segments, p);
+    const r = r0 + (r1 - r0) * Math.pow(i / segments, 0.8);
+    for (let j = 0; j <= radial; j++) {
+      const k = i * (radial + 1) + j;
+      v.fromBufferAttribute(pos, k).sub(p).multiplyScalar(r).add(p);
+      pos.setXYZ(k, v.x, v.y, v.z);
     }
-    g.computeVertexNormals();
-    return g;
-  }, [points, r0, r1, segments]);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+export function useTaperedTube(points: [number, number, number][], r0: number, r1: number, segments = 40) {
+  const geo = useMemo(() => taperedTube(points, r0, r1, segments), [points, r0, r1, segments]);
   useEffect(() => () => geo.dispose(), [geo]);
   return geo;
 }
