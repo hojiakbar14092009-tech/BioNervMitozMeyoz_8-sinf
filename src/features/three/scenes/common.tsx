@@ -58,14 +58,44 @@ export function Callout({ part, dir, on, label, color, select }: { part: string;
   const [dx, dy] = dir;
   const len = Math.hypot(dx, dy);
   const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const box = useRef<HTMLButtonElement>(null);
+  // keep the box inside the viewer as the model rotates; the leader line still marks the structure
+  useEffect(() => {
+    let raf = 0;
+    let nx = 0;
+    let ny = 0;
+    const tick = () => {
+      const el = box.current;
+      const stage = el?.closest('.viewer-stage')?.getBoundingClientRect();
+      if (el && stage) {
+        const r = el.getBoundingClientRect();
+        const pad = 6;
+        const left = r.left - nx;
+        const top = r.top - ny;
+        // the right edge keeps clear of the zoom pad
+        const tx = Math.max(0, stage.left + pad - left) - Math.max(0, left + r.width - (stage.right - 58));
+        const ty = Math.max(0, stage.top + pad - top) - Math.max(0, top + r.height - (stage.bottom - pad));
+        if (tx !== nx || ty !== ny) {
+          nx = tx;
+          ny = ty;
+          el.style.setProperty('--nx', `${nx}px`);
+          el.style.setProperty('--ny', `${ny}px`);
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
   return (
     <div className={`callout ${on ? 'on' : ''}`} style={{ '--c': color } as React.CSSProperties}>
       <span className="callout-dot" />
       <span className="callout-line" style={{ width: len, transform: `rotate(${ang}deg)` }} />
       <button
+        ref={box}
         type="button"
         className="callout-box"
-        style={{ transform: `translate(${dx}px, ${dy}px) translate(${dx < 0 ? '-100%' : '0'}, -50%)` }}
+        style={{ transform: `translate(${dx}px, ${dy}px) translate(${dx < 0 ? '-100%' : '0'}, -50%) translate(var(--nx, 0px), var(--ny, 0px))` }}
         onClick={() => select(on ? null : part)}
       >
         {label}

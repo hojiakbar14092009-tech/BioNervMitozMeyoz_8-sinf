@@ -18,14 +18,16 @@ export interface ViewerConfig {
   autoSpeed: number;
   /** Optional cut-away toggle label (scene implements it with a clipping plane). */
   section?: string;
+  /** Half-width of the model seen from the opening view; the camera backs off until it fits the canvas. */
+  span?: number;
   floor: number;
 }
 
 const base = { target: [0, 0, 0] as V3, minPolar: 0.15, maxPolar: Math.PI - 0.15, autoRotate: false, autoSpeed: 1.8, minDistance: 2.2, maxDistance: 8.5 };
 
 export const VIEWER: Record<SceneKey, ViewerConfig> = {
-  neuron: { ...base, front: [0, 0, 1], initial: [0.05, 0.12, 1], distance: 4.6, autoRotate: true, autoSpeed: 1.6, floor: -1.3 },
-  reflexArc: { ...base, front: [0, 0, 1], initial: [0.1, 0.2, 1], distance: 4.9, floor: -1.5 },
+  neuron: { ...base, front: [0, 0, 1], initial: [0.05, 0.12, 1], distance: 4.6, span: 2.45, maxDistance: 9.5, autoRotate: true, autoSpeed: 1.6, floor: -1.3 },
+  reflexArc: { ...base, front: [0, 0, 1], initial: [0.1, 0.2, 1], distance: 4.9, span: 2.75, maxDistance: 10, floor: -1.5 },
   spinalCord: { ...base, front: [0, 0, 1], initial: [0.32, 0.3, 1], distance: 3.8, autoRotate: true, autoSpeed: 1.4, floor: -1.1 },
   brain: { ...base, target: [0.1, -0.2, 0], front: [-1, 0, 0], initial: [-0.32, 0.18, 1], distance: 4.4, autoRotate: true, autoSpeed: 1.5, section: 'Sagittal kesim', floor: -1.7 },
   metabolism: { ...base, front: [0, 0, 1], initial: [0.15, 0.22, 1], distance: 5.1, autoRotate: true, autoSpeed: 1.2, section: 'Mitoxondriya kesimi', floor: -1.95 },

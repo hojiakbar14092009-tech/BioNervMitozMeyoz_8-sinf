@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, Environment, Lightformer, OrbitControls, PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
+import QaSheet from './QaSheet';
 import type { SceneConfig, SceneKey } from '../../types';
 import { useReducedMotion } from '../../lib/hooks';
 import SceneFallback from './Fallback';
@@ -101,6 +102,22 @@ function CameraRig({ request, controls, min, max }: { request: RigRequest; contr
     c.update();
     if (camera.position.distanceTo(goal.current) < 0.01) goal.current = null;
   });
+  return null;
+}
+
+/** Backs the opening camera off until a wide model fits the canvas width; that view becomes the reset state. */
+function FitWidth({ span, controls }: { span?: number; controls: React.RefObject<OrbitImpl | null> }) {
+  const { camera, size } = useThree();
+  useEffect(() => {
+    const c = controls.current;
+    if (!span || !c || !(camera instanceof THREE.PerspectiveCamera)) return;
+    const need = (span / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (size.width / size.height))) * 1.06;
+    const off = camera.position.clone().sub(c.target);
+    if (off.length() >= need) return;
+    camera.position.copy(c.target).add(off.setLength(Math.min(need, c.maxDistance)));
+    c.update();
+    c.saveState();
+  }, [span, size.width, size.height, camera, controls]);
   return null;
 }
 
@@ -292,6 +309,8 @@ export default function Viewer({ scene: base }: { scene: SceneConfig }) {
                     idle.current = window.setTimeout(() => setInteracting(false), 6000);
                   }}
                 />
+                {import.meta.env.DEV && <QaSheet controls={controls} />}
+                <FitWidth span={cfg.span} controls={controls} />
                 <CameraRig request={rig} controls={controls} min={cfg.minDistance} max={cfg.maxDistance} />
               </Canvas>
             </Suspense>
