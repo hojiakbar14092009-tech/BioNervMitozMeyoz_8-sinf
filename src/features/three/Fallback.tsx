@@ -39,6 +39,26 @@ export default function SceneFallback({ scene, stage }: { scene: SceneConfig; st
   let art: React.ReactNode = null;
   switch (scene.key) {
     case 'division': {
+      if (scene.mode === 'binary') {
+        // bacterium: one rod → elongated with two DNA copies → pinched → two cells (p. 73)
+        const split = stage >= 4;
+        const pinch = stage === 3;
+        const rods = split ? [[30, 170], [210, 170]] : [[40, 320]];
+        art = (
+          <svg viewBox="0 0 400 140" className="fallback-svg" role="img" aria-label="Bakteriyaning ikkiga bo‘linishi sxemasi">
+            <g className="f-tissue">
+              {rods.map(([x, w]) => (
+                <rect key={x} x={x} y="40" width={w} height="60" rx="30" />
+              ))}
+              {pinch && <path d="M200 40 L200 58 M200 100 L200 82" />}
+              {(stage >= 1 ? [130, 270] : [200]).map((cx) => (
+                <ellipse key={cx} cx={cx} cy="70" rx="26" ry="14" className="f-myelin" />
+              ))}
+            </g>
+          </svg>
+        );
+        break;
+      }
       if (scene.mode === 'compare') {
         const c = compareSteps[Math.min(stage, compareSteps.length - 1)];
         art = (

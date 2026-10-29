@@ -191,20 +191,60 @@ function Inclusions({ r, seed }: { r: number; seed: number }) {
   );
 }
 
+type CellLike = { x: number; y: number; r: number };
+/** Index pairs of cells whose spheres intersect (a cell that is still dividing). */
+export const fusedPairs = (cells: CellLike[]) =>
+  cells.flatMap((a, i) =>
+    cells
+      .slice(i + 1)
+      .map((_, k) => [i, i + 1 + k] as [number, number])
+      .filter(([, j]) => Math.hypot(cells[j].x - a.x, cells[j].y - a.y) < a.r + cells[j].r - 1e-3),
+  );
+
+/** One membrane around two overlapping cells: the union of both spheres, creased by a cleavage furrow. */
+function Furrow({ a, b }: { a: CellLike; b: CellLike }) {
+  const d = Math.hypot(b.x - a.x, b.y - a.y);
+  const geo = useMemo(() => {
+    const n = 96;
+    const pts: THREE.Vector2[] = [];
+    for (let i = 0; i <= n; i++) {
+      const s = -a.r + ((d + b.r + a.r) * i) / n;
+      const r = Math.max(Math.sqrt(Math.max(0, a.r * a.r - s * s)), Math.sqrt(Math.max(0, b.r * b.r - (s - d) ** 2)));
+      pts.push(new THREE.Vector2(i === 0 || i === n ? 0 : Math.max(r, 0.002), s));
+    }
+    return new THREE.LatheGeometry(pts, 64);
+  }, [a.r, b.r, d]);
+  useEffect(() => () => geo.dispose(), [geo]);
+  // the lathe axis (+y) is turned to point from a to b
+  const ang = Math.atan2(b.y - a.y, b.x - a.x) - Math.PI / 2;
+  return (
+    <mesh geometry={geo} position={[a.x, a.y, 0]} rotation={[0, 0, ang]} raycast={() => null}>
+      <Membrane color="#a58ccf" rim="#f3e6ff" opacity={0.08} strength={1.1} />
+    </mesh>
+  );
+}
+
 function DivisionFrame({ f, pal, reduced, prefix = '' }: { f: Frame; pal: Pal; reduced: boolean; prefix?: string }) {
   const { selected } = useSelection();
   const beads = useMemo(() => centromeres(f), [f]);
   const metaphase = f.id.startsWith('metafaza');
   const spindleOn = selected === 'urchuq';
   const spindleCol = spindleOn ? '#f4d58e' : '#d8c79c';
+  const pairs = useMemo(() => fusedPairs(f.cells), [f]);
+  const fused = new Set(pairs.flat());
   return (
     <group>
+      {pairs.map(([i, j]) => (
+        <Furrow key={`${prefix}${f.id}-f${i}${j}`} a={f.cells[i]} b={f.cells[j]} />
+      ))}
       {f.cells.map((cell, i) => (
         <group key={`${prefix}${f.id}-${i}`} position={[cell.x, cell.y, 0]}>
-          <mesh raycast={() => null}>
-            <sphereGeometry args={[cell.r, 64, 48]} />
-            <Membrane color="#a58ccf" rim="#f3e6ff" opacity={0.08} strength={1.1} />
-          </mesh>
+          {!fused.has(i) && (
+            <mesh raycast={() => null}>
+              <sphereGeometry args={[cell.r, 64, 48]} />
+              <Membrane color="#a58ccf" rim="#f3e6ff" opacity={0.08} strength={1.1} />
+            </mesh>
+          )}
           <Inclusions r={cell.r} seed={i * 13 + f.id.length} />
           {cell.nucleus > 0 && (
             <Part part="yadro" opacity={0.12 + 0.18 * cell.nucleus} roughness={0.3} anchor={i === 0 ? [-cell.r * 0.35, cell.r * 0.4, 0] : undefined} calloutDir={[-60, -40]}>

@@ -105,19 +105,20 @@ function CameraRig({ request, controls, min, max }: { request: RigRequest; contr
   return null;
 }
 
-/** Backs the opening camera off until a wide model fits the canvas width; that view becomes the reset state. */
-function FitWidth({ span, controls }: { span?: number; controls: React.RefObject<OrbitImpl | null> }) {
+/** Backs the opening camera off until the model fits the canvas width/height; that view becomes the reset state. */
+function FitWidth({ span, halfHeight, controls }: { span?: number; halfHeight?: number; controls: React.RefObject<OrbitImpl | null> }) {
   const { camera, size } = useThree();
   useEffect(() => {
     const c = controls.current;
-    if (!span || !c || !(camera instanceof THREE.PerspectiveCamera)) return;
-    const need = (span / (Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * (size.width / size.height))) * 1.06;
+    if ((!span && !halfHeight) || !c || !(camera instanceof THREE.PerspectiveCamera)) return;
+    const tan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const need = Math.max((span ?? 0) / (tan * (size.width / size.height)), (halfHeight ?? 0) / tan) * 1.06;
     const off = camera.position.clone().sub(c.target);
     if (off.length() >= need) return;
     camera.position.copy(c.target).add(off.setLength(Math.min(need, c.maxDistance)));
     c.update();
     c.saveState();
-  }, [span, size.width, size.height, camera, controls]);
+  }, [span, halfHeight, size.width, size.height, camera, controls]);
   return null;
 }
 
@@ -310,7 +311,7 @@ export default function Viewer({ scene: base }: { scene: SceneConfig }) {
                   }}
                 />
                 {import.meta.env.DEV && <QaSheet controls={controls} />}
-                <FitWidth span={cfg.span} controls={controls} />
+                <FitWidth span={cfg.span} halfHeight={cfg.halfHeight} controls={controls} />
                 <CameraRig request={rig} controls={controls} min={cfg.minDistance} max={cfg.maxDistance} />
               </Canvas>
             </Suspense>

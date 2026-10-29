@@ -16,6 +16,11 @@ const TARGET = [
 const R = 0.42;
 const L0 = 0.62; // half-length of the straight part
 
+/** Each daughter exactly fills one half of the pinched mother cell (straight half-length, centre x), then they drift apart. */
+export function daughterLayout(motherHalf: number, apart: number) {
+  return { half: Math.max(0.05, (motherHalf + R) / 2 - R), x: (motherHalf + R) / 2 + apart * 0.5, cap: R };
+}
+
 /** Rod cell outline (lathe about x): rounded poles; `pinch` narrows the middle toward division. */
 function rodProfile(half: number, pinch: number, cap = R) {
   const pts: THREE.Vector2[] = [];
@@ -92,7 +97,7 @@ export default function Binary({ stage, reduced }: { stage: number; reduced: boo
     (Object.keys(c) as (keyof typeof c)[]).forEach((p) => (c[p] += (goal[p] - c[p]) * k));
     const half = L0 * (1 + c.elong);
     // DNA: second copy grows in (replication), then both move toward opposite halves
-    const off = c.split * half * 0.52 + c.apart * 0.5;
+    const off = c.split * ((half + R) / 2) + c.apart * 0.5; // centre of each future daughter cell
     dnaA.current?.position.set(-off, 0, 0);
     dnaB.current?.position.set(off, 0, 0);
     dnaB.current?.scale.setScalar(Math.max(0.001, c.copy));
@@ -104,13 +109,14 @@ export default function Binary({ stage, reduced }: { stage: number; reduced: boo
 
   const half = L0 * (1 + shape.elong);
   const separated = shape.pinch > 0.985;
+  const { half: daughterHalf, x: daughterX } = daughterLayout(half, shape.apart);
   return (
     <group rotation={[0.15, 0, 0]}>
       {separated ? (
         // two daughter bacteria, each a complete rod
         <>
-          <Cell half={half * 0.42} pinch={0} x={-(half * 0.5 + shape.apart * 0.5) - 0.06} />
-          <Cell half={half * 0.42} pinch={0} x={half * 0.5 + shape.apart * 0.5 + 0.06} />
+          <Cell half={daughterHalf} pinch={0} x={-daughterX} />
+          <Cell half={daughterHalf} pinch={0} x={daughterX} />
         </>
       ) : (
         <Cell half={half} pinch={shape.pinch} />
