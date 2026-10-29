@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PROBLEMS, energy } from '../features/interactives/energy';
 import { GENETIC_CODE, TRANSLATION_CODONS, codons, transcribe } from '../features/three/sequences';
-import { segments } from '../features/highlights/Highlights';
+import { segments } from '../features/highlights/engine';
 import { meiosisFrames, mitosisFrames } from '../features/division/stages';
 
 describe('energy (Biologiya 10, pp.62–64)', () => {

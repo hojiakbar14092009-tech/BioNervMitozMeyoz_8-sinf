@@ -5,7 +5,7 @@ import { books } from '../data/books';
 import { getNeighbours, getTopicBySlug, topicLabel, topicPath } from '../data/registry';
 import { getQuiz } from '../data/quizRegistry';
 import { actions, useAppState } from '../lib/store';
-import { HL, HighlightArea } from '../features/highlights/Highlights';
+import { HL, HighlightArea, HighlightBar } from '../features/highlights/Highlights';
 import Interactive from '../features/interactives';
 import Quiz from '../features/quiz/Quiz';
 import MotifArt from '../components/MotifArt';
@@ -140,7 +140,8 @@ export default function TopicPage({ bookId }: { bookId: BookId }) {
             <li key={c}>{c}</li>
           ))}
         </ul>
-        <p className="muted small">Darslik, {topic.pages[0]}–{topic.pages[1]}-betlar · Matnni belgilash uchun uni tanlang.</p>
+        <p className="muted small">Darslik, {topic.pages[0]}–{topic.pages[1]}-betlar · Muhim so‘zni belgilash uchun ustiga ikki marta bosing — bir nechta so‘zni tanlab, «Belgilash»ni bosing.</p>
+        <HighlightBar topic={topic} />
       </header>
 
       <HighlightArea topic={topic}>

@@ -33,7 +33,10 @@ export function migrate(raw: unknown): AppState {
     lastBook: r.lastBook === 'grade8' || r.lastBook === 'grade10' ? r.lastBook : null,
     theme: r.theme === 'light' || r.theme === 'dark' ? r.theme : null,
     audioEnabled: r.audioEnabled !== false,
-    highlights: Array.isArray(r.highlights) ? r.highlights.filter((h) => h && h.topicKey?.startsWith(`${h.bookId}-`)) : [],
+    // records saved before multi-word selection have no groupId/prefix/suffix: they stay valid as single-segment groups
+    highlights: Array.isArray(r.highlights)
+      ? r.highlights.filter((h) => h && h.topicKey?.startsWith(`${h.bookId}-`) && typeof h.exactText === 'string' && Number.isFinite(h.startOffset) && Number.isFinite(h.endOffset))
+      : [],
   };
 }
 
@@ -100,12 +103,36 @@ export const actions = {
     set({ ...state, audioEnabled });
   },
   addHighlight(h: Highlight) {
-    const dup = state.highlights.some(
-      (x) => x.topicKey === h.topicKey && x.blockId === h.blockId && x.startOffset === h.startOffset && x.endOffset === h.endOffset,
-    );
-    if (!dup) set({ ...state, highlights: [...state.highlights, h] });
+    return actions.addHighlights([h]);
+  },
+  /**
+   * Saves one “Belgilash” batch in a single write. Returns false — and changes nothing — if storage refuses
+   * the write, so the caller can keep the learner's selection and offer a retry.
+   */
+  addHighlights(list: Highlight[]) {
+    const same = (a: Highlight, b: Highlight) => a.topicKey === b.topicKey && a.blockId === b.blockId && a.startOffset === b.startOffset && a.endOffset === b.endOffset;
+    const fresh = list.filter((h, i) => !state.highlights.some((x) => same(x, h)) && list.findIndex((y) => same(y, h)) === i);
+    if (!fresh.length) return true;
+    const next = { ...state, highlights: [...state.highlights, ...fresh] };
+    let storage: Storage | undefined;
+    try {
+      storage = globalThis.localStorage;
+    } catch {
+      // access itself blocked: like the rest of the app, keep in memory
+    }
+    try {
+      storage?.setItem(KEY, JSON.stringify(next));
+    } catch {
+      return false; // storage exists but refused the write (e.g. quota full)
+    }
+    state = next;
+    listeners.forEach((l) => l());
+    return true;
   },
   removeHighlight(id: string) {
-    set({ ...state, highlights: state.highlights.filter((h) => h.id !== id) });
+    actions.removeHighlights([id]);
+  },
+  removeHighlights(ids: string[]) {
+    set({ ...state, highlights: state.highlights.filter((h) => !ids.includes(h.id)) });
   },
 };

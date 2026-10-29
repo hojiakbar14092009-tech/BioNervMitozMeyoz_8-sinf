@@ -40,6 +40,72 @@ mark.hl.hl-flash {
   min-width: 150px;
 }
 
+/* unsaved word selection: cool outlined tint, clearly not the amber saved mark */
+:root {
+  --hl-draft-bg: #e3e8ff;
+  --hl-draft-edge: #5566d6;
+  --hl-draft-text: #1d212c;
+}
+[data-theme='dark'] {
+  --hl-draft-bg: #2b3366;
+  --hl-draft-edge: #9aa8ff;
+  --hl-draft-text: #f1f3ff;
+}
+.hl-draft {
+  background: var(--hl-draft-bg);
+  color: var(--hl-draft-text);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1.5px var(--hl-draft-edge);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+/* lesson text: a double-tap selects a word instead of zooming; scrolling and pinch-zoom are untouched */
+[data-hl-block] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* action bar for the unsaved selection: fixed to the viewport (portalled), above the home indicator */
+.hl-bar {
+  position: fixed;
+  /* centred without transform, so the entrance animation (which animates transform) never shifts it sideways */
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 55;
+  width: min(560px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 14px;
+  background: var(--elev);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.28);
+  animation: pageIn 0.18s ease-out;
+}
+.hl-bar-count {
+  font-weight: 700;
+}
+.hl-bar-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.hl-bar .btn {
+  min-height: 44px;
+}
+body:has(.hl-bar) .toast-region {
+  bottom: calc(96px + env(safe-area-inset-bottom));
+}
+/* room to scroll the last lines above the bar */
+body:has(.hl-bar) main {
+  padding-bottom: 96px;
+}
+
 /* ===================== back navigation, page motion, toast ===================== */
 .page-top {
   margin: -6px 0 8px;

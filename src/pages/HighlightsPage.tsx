@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { BookId, TopicKey } from '../types';
+import type { BookId, Highlight, TopicKey } from '../types';
 import { books } from '../data/books';
 import { getTopic, topicLabel, topicPath } from '../data/registry';
 import { actions, useAppState } from '../lib/store';
@@ -20,9 +20,13 @@ export default function HighlightsPage() {
   const inBook = all.filter((h) => filter === 'all' || h.bookId === filter);
   const topics = [...new Set(inBook.map((h) => h.topicKey))].map((k) => getTopic(k)).filter((t) => t !== undefined);
   const q = query.trim().toLocaleLowerCase('uz');
-  const list = inBook
-    .filter((h) => (!topic || h.topicKey === topic) && (!q || h.exactText.toLocaleLowerCase('uz').includes(q)))
-    .sort((a, b) => b.createdAt - a.createdAt);
+  // segments saved with one “Belgilash” form one item; older single records are their own group
+  const groups = new Map<string, Highlight[]>();
+  for (const h of inBook) groups.set(h.groupId ?? h.id, [...(groups.get(h.groupId ?? h.id) ?? []), h]);
+  const list = [...groups.values()]
+    .filter((g) => (!topic || g[0].topicKey === topic) && (!q || g.some((h) => h.exactText.toLocaleLowerCase('uz').includes(q))))
+    .sort((a, b) => b[0].createdAt - a[0].createdAt);
+  const countIn = (f: Filter) => new Set(all.filter((h) => f === 'all' || h.bookId === f).map((h) => h.groupId ?? h.id)).size;
 
   return (
     <div className="page highlights-page">
@@ -37,7 +41,7 @@ export default function HighlightsPage() {
           <div className="seg" role="group" aria-label="Sinf bo‘yicha filtr">
             {(['all', 'grade8', 'grade10'] as Filter[]).map((f) => (
               <button key={f} type="button" aria-pressed={filter === f} className={filter === f ? 'on' : ''} onClick={() => { setFilter(f); setTopic(''); }}>
-                {f === 'all' ? 'Barchasi' : books[f].grade} ({all.filter((h) => f === 'all' || h.bookId === f).length})
+                {f === 'all' ? 'Barchasi' : books[f].grade} ({countIn(f)})
               </button>
             ))}
           </div>
@@ -66,7 +70,7 @@ export default function HighlightsPage() {
       {all.length === 0 ? (
         <div className="empty-state">
           <p><strong>Hali hech narsa belgilanmagan.</strong></p>
-          <p className="muted">Dars matnidan muhim so‘z yoki gapni tanlang va «Belgilash» tugmasini bosing — u shu yerda avtomatik paydo bo‘ladi.</p>
+          <p className="muted">Dars matnidagi so‘zlarga ikki marta bosib tanlang va «Belgilash» tugmasini bosing — ular shu yerda avtomatik paydo bo‘ladi.</p>
           <div className="row-actions">
             <Link className="btn btn-primary" to={books.grade8.route}>8-sinf darslari</Link>
             <Link className="btn" to={books.grade10.route}>10-sinf darslari</Link>
@@ -76,17 +80,23 @@ export default function HighlightsPage() {
         <p className="muted" aria-live="polite">Bu filtr bo‘yicha belgilangan matn topilmadi.</p>
       ) : (
         <ul className="hl-list" aria-live="polite">
-          {list.map((h) => {
+          {list.map((g) => {
+            const h = g[0];
             const t = getTopic(h.topicKey);
             if (!t || t.bookId !== h.bookId) return null;
             return (
-              <li key={h.id} className={`hl-item card-${h.bookId}`}>
+              <li key={h.groupId ?? h.id} className={`hl-item card-${h.bookId}`}>
                 <p className="hl-meta small">
                   <strong>{books[h.bookId].grade} · {topicLabel(t)}</strong> <span className="muted">· {fmtDate(h.createdAt)}</span>
                 </p>
                 <p className="hl-topic">{t.title}</p>
                 <blockquote>
-                  <mark className="hl">{h.exactText}</mark>
+                  {g.map((x, i) => (
+                    <span key={x.id}>
+                      {i > 0 && <span className="hl-gap"> … </span>}
+                      <mark className="hl">{x.exactText}</mark>
+                    </span>
+                  ))}
                 </blockquote>
                 <div className="row-actions">
                   <Link className="btn btn-sm" to={`${topicPath(t)}#hl-${h.id}`}>Mavzuga qaytish →</Link>
@@ -94,7 +104,7 @@ export default function HighlightsPage() {
                     type="button"
                     className="btn btn-sm"
                     onClick={() => {
-                      actions.removeHighlight(h.id);
+                      actions.removeHighlights(g.map((x) => x.id));
                       toast('Belgi olib tashlandi');
                     }}
                   >

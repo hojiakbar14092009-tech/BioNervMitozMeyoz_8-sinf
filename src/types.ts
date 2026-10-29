@@ -156,6 +156,11 @@ export interface Highlight {
   startOffset: number;
   endOffset: number;
   createdAt: number;
+  /** Segments saved together with one “Belgilash” share a group (older records have none: each is its own group). */
+  groupId?: string;
+  /** Text just before / after the segment, used to find the right occurrence if offsets drift. */
+  prefix?: string;
+  suffix?: string;
 }
 
 export interface BookProgress {

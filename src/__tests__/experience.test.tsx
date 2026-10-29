@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { introMode } from '../lib/intro';
 import { parentOf } from '../lib/nav';
-import { resolveRange } from '../features/highlights/Highlights';
+import { resolveRange } from '../features/highlights/engine';
 import { actions, getState } from '../lib/store';
 import HighlightsPage from '../pages/HighlightsPage';
 import BookPage from '../pages/BookPage';
