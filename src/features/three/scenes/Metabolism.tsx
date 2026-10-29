@@ -12,17 +12,25 @@ const MITOS: { at: P; rot: P; s: number }[] = [
 ];
 const MAIN = MITOS[0].at;
 
+const BEND = 0.2;
+/** Gentle bean curvature along the capsule's long (y) axis. */
+function bean(g: THREE.BufferGeometry) {
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) pos.setX(i, pos.getX(i) + BEND * pos.getY(i) ** 2);
+  return g;
+}
+
 /** Volumetric mitochondrion: outer membrane (opens in section view) + folded inner membrane (cristae). */
 function Mitochondrion({ at, rot, s, label }: { at: P; rot: P; s: number; label?: boolean }) {
-  const outer = useOrganic(() => new THREE.CapsuleGeometry(0.3, 0.62, 16, 40), 0.012, 6, 3);
-  const inner = useOrganic(() => new THREE.CapsuleGeometry(0.255, 0.56, 12, 32), 0.01, 7, 5);
+  const outer = useOrganic(() => bean(new THREE.CapsuleGeometry(0.3, 0.62, 16, 40)), 0.012, 6, 3);
+  const inner = useOrganic(() => bean(new THREE.CapsuleGeometry(0.255, 0.56, 12, 32)), 0.01, 7, 5);
   return (
     <group position={at} rotation={rot} scale={s}>
       <Part part="mitoxondriya" geometry={outer} rotation={[0, 0, Math.PI / 2]} scale={[1, 1, 0.62]} roughness={0.45} clip={label} anchor={label ? [0.35, 0.05, 0.2] : undefined} calloutDir={[50, -60]} />
       <Part part="mitoxondriya" geometry={inner} rotation={[0, 0, Math.PI / 2]} scale={[1, 1, 0.58]} color="#e9a56a" roughness={0.6} pickable={false} clip={label} />
-      {/* cristae: inner-membrane folds across the matrix */}
+      {/* cristae: inner-membrane folds across the matrix, following the bent axis and staying inside the inner membrane */}
       {[-0.42, -0.26, -0.1, 0.06, 0.22, 0.38].map((x, i) => (
-        <Part key={x} part="mitoxondriya" position={[x, (i % 2 ? 1 : -1) * 0.03, 0]} rotation={[0, Math.PI / 2, 0]} scale={[1, 1.15, 0.5]} color="#b8603f" pickable={false}>
+        <Part key={x} part="mitoxondriya" position={[x, BEND * x * x + (i % 2 ? 1 : -1) * 0.03, 0]} rotation={[0, Math.PI / 2, 0]} scale={[0.7, 1.1, 0.5]} color="#b8603f" pickable={false}>
           <torusGeometry args={[0.15, 0.026, 10, 28, Math.PI * 1.25]} />
         </Part>
       ))}
