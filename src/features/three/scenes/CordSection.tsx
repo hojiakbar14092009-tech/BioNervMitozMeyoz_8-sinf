@@ -1,18 +1,23 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
-import { Part, TaperTube, rand, useOrganic } from './common';
+import { mergeBufferGeometries } from 'three-stdlib';
+import { Part, rand, taperedTube, useOrganic } from './common';
 import { butterfly, cordOutline } from './shapes';
 
 type P = [number, number, number];
 
-/** A bundle of individual nerve fibres that fan out between two ends (reference: yellow root bundles). */
-export function FiberBundle({ from, to, bend, count = 7, spread = 0.07, r = 0.016, part, color, seed = 1, emissiveBoost = 0, anchor, calloutDir }: {
+/**
+ * A bundle of individual nerve fibres (reference: yellow root bundles), merged into one mesh.
+ * `fan` spreads the fibres along the cord (z) where they leave it, as rootlets that converge into the root.
+ */
+export function FiberBundle({ from, to, bend, count = 7, spread = 0.07, r = 0.016, fan = 0, part, color, seed = 1, emissiveBoost = 0, anchor, calloutDir }: {
   from: P;
   to: P;
   bend: P;
   count?: number;
   spread?: number;
   r?: number;
+  fan?: number;
   part?: string;
   color?: string;
   seed?: number;
@@ -20,28 +25,29 @@ export function FiberBundle({ from, to, bend, count = 7, spread = 0.07, r = 0.01
   anchor?: P;
   calloutDir?: [number, number];
 }) {
-  const key = JSON.stringify([from, to, bend, count, spread, seed]); // inline array props: memo by value
-  const paths = useMemo(
-    () =>
-      Array.from({ length: count }, (_, i) => {
+  const key = JSON.stringify([from, to, bend, count, spread, r, fan, seed]); // inline array props: memo by value
+  const geo = useMemo(
+    () => {
+      const tubes = Array.from({ length: count }, (_, i) => {
         const j = (k: number) => (rand(i, seed + k) - 0.5) * spread;
-        // ends converge (bundle), middle fans out
-        return [
-          [from[0] + j(1) * 0.4, from[1] + j(2) * 0.4, from[2] + j(3) * 0.4],
-          [bend[0] + j(4) * 1.6, bend[1] + j(5) * 1.6, bend[2] + j(6) * 1.6],
+        const along = count > 1 ? (i / (count - 1) - 0.5) * fan : 0;
+        const w = r * (0.75 + rand(i, seed + 10) * 0.5); // fibres differ in thickness
+        const pts: P[] = [
+          [from[0] + j(1) * 0.4, from[1] + j(2) * 0.4, from[2] + j(3) * 0.4 + along],
+          [bend[0] + j(4) * (fan ? 0.8 : 1.6), bend[1] + j(5) * (fan ? 0.8 : 1.6), bend[2] + j(6) * (fan ? 0.8 : 1.6) + along * 0.25],
           [to[0] + j(7) * 0.5, to[1] + j(8) * 0.5, to[2] + j(9) * 0.5],
-        ] as P[];
-      }),
+        ];
+        return taperedTube(pts, w, w * 0.8, 24, 8);
+      });
+      const merged = mergeBufferGeometries(tubes)!;
+      tubes.forEach((t) => t.dispose());
+      return merged;
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [key],
   );
-  return (
-    <>
-      {paths.map((p, i) => (
-        <TaperTube key={i} points={p} r0={r} r1={r * 0.85} part={part} color={color ?? (part ? undefined : '#e0b552')} emissiveBoost={emissiveBoost} anchor={i === 0 ? anchor : undefined} calloutDir={calloutDir} roughness={0.45} />
-      ))}
-    </>
-  );
+  useEffect(() => () => geo.dispose(), [geo]);
+  return <Part geometry={geo} part={part} color={color ?? (part ? undefined : '#e0b552')} emissiveBoost={emissiveBoost} anchor={anchor} calloutDir={calloutDir} roughness={0.45} />;
 }
 
 export function Ganglion({ at, part, scale = 1, anchor, calloutDir }: { at: P; part?: string; scale?: number; anchor?: P; calloutDir?: [number, number] }) {
