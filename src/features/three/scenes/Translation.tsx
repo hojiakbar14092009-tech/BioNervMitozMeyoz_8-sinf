@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { mergeVertices } from 'three-stdlib';
 import type { SceneProps } from '../Viewer';
 import { TRANSLATION_CODONS } from '../sequences';
-import { InstancedSpheres, Part, blobCluster } from './common';
+import { InstancedSpheres, Part, rand } from './common';
 
 const NT_COLOR: Record<string, string> = { A: '#d9554f', U: '#e2b74a', G: '#4fa56e', C: '#5779d6' };
 const W = 0.42; // codon width (3 bases)
@@ -11,25 +12,62 @@ const TRNA_COLORS = ['#e2b74a', '#9b74d6', '#5fae78'];
 const AMINO = ['#e0a85a', '#d9776e', '#9b74d6', '#5fae78', '#5b9fd0', '#d38fb8'];
 type P = [number, number, number];
 
-/** Large subunit as a lumpy molecular cluster with an open front cleft where tRNAs bind (reference 6). */
+/**
+ * Ribosomal subunit as one smooth surface: overlapping globular bumps (protein/RNA domains) on an
+ * ellipsoid, with a carved groove — the tRNA cleft (large subunit) or the iRNK channel (small subunit).
+ */
+function subunitGeometry(size: [number, number, number], seed: number, carve: (x: number, y: number, z: number) => number, detail = 6) {
+  // welded so normals are smooth (icosahedron output is non-indexed)
+  const g = mergeVertices(new THREE.IcosahedronGeometry(1, detail).deleteAttribute('normal').deleteAttribute('uv'));
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const bumps = Array.from({ length: 46 }, (_, i) => {
+    const u = rand(i, seed) * 2 - 1;
+    const th = rand(i, seed + 1) * Math.PI * 2;
+    const s = Math.sqrt(1 - u * u);
+    return { d: new THREE.Vector3(s * Math.cos(th), u, s * Math.sin(th)), w: 0.18 + rand(i, seed + 2) * 0.2, h: 0.07 + rand(i, seed + 3) * 0.11 };
+  });
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).normalize();
+    let r = 1;
+    for (const b of bumps) r += b.h * Math.exp(-(v.distanceToSquared(b.d) / (b.w * b.w)));
+    r += 0.012 * Math.sin(v.x * 23 + seed) * Math.sin(v.y * 19) * Math.sin(v.z * 21);
+    const p = v.clone().multiplyScalar(r);
+    p.set(p.x * size[0], p.y * size[1], p.z * size[2]);
+    p.multiplyScalar(1 - carve(p.x, p.y, p.z));
+    pos.setXYZ(i, p.x, p.y, p.z);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
 function useSubunits() {
-  return useMemo(() => {
-    const big = blobCluster(320, [1.05, 0.66, 0.72], 0.085, 7);
-    const keep = big.pts.map((p) => !(p[2] > 0.18 && Math.abs(p[0]) < 0.42 && p[1] < 0.25));
-    const small = blobCluster(200, [1.0, 0.33, 0.66], 0.075, 3);
-    return {
-      big: { pts: big.pts.filter((_, i) => keep[i]).map(([x, y, z]) => [x, y + 0.2, z] as P), rad: big.rad.filter((_, i) => keep[i]) },
-      small: { pts: small.pts.map(([x, y, z]) => [x, y - 0.86, z] as P), rad: small.rad },
-    };
-  }, []);
+  const geos = useMemo(
+    () => ({
+      // large: cleft open toward the viewer above the iRNK where tRNAs sit
+      big: subunitGeometry([1.0, 0.62, 0.7], 7, (x, y, z) => (z > 0 ? 0.62 * Math.exp(-((x / 0.55) ** 4)) * Math.exp(-(((y + 0.25) / 0.55) ** 2)) * Math.min(1, z / 0.45) : 0)),
+      // small: shallow channel along x on top for the iRNK
+      small: subunitGeometry([0.98, 0.32, 0.64], 3, (_x, y, z) => (y > 0 ? 0.2 * Math.exp(-((z / 0.18) ** 2)) * (y / 0.32) : 0)),
+    }),
+    [],
+  );
+  useEffect(
+    () => () => {
+      geos.big.dispose();
+      geos.small.dispose();
+    },
+    [geos],
+  );
+  return geos;
 }
 
 function TRNA({ codon, color, amino, fading }: { codon: string; color: string; amino?: string; fading?: boolean }) {
-  const body = useMemo(() => blobCluster(46, [0.13, 0.24, 0.1], 0.05, codon.charCodeAt(0) + codon.charCodeAt(2)), [codon]);
+  const body = useMemo(() => subunitGeometry([0.14, 0.26, 0.11], codon.charCodeAt(0) + codon.charCodeAt(2), () => 0, 4), [codon]);
+  useEffect(() => () => body.dispose(), [body]);
   const anti = [...codon].map((b) => ({ A: 'U', U: 'A', G: 'C', C: 'G' })[b]!);
   return (
     <group>
-      <InstancedSpheres part="trna" color={color} points={body.pts.map(([x, y, z]) => [x, y + 0.02, z] as P)} radii={body.rad} opacity={fading ? 0.55 : 1} anchor={fading ? undefined : [0.16, 0.12, 0]} calloutDir={[70, -40]} />
+      <Part part="trna" color={color} geometry={body} position={[0, 0.02, 0]} roughness={0.6} opacity={fading ? 0.55 : 1} anchor={fading ? undefined : [0.16, 0.12, 0]} calloutDir={[70, -40]} />
       {/* anticodon: three bases pairing with the codon below */}
       {anti.map((b, j) => (
         <Part key={j} part="trna" color={NT_COLOR[b]} position={[(j - 1) * 0.13, -0.3, 0]} opacity={fading ? 0.55 : 1}>
@@ -83,8 +121,8 @@ export default function Translation({ stage, reduced }: SceneProps) {
 
   return (
     <group position={[0, 0.05, 0]}>
-      <InstancedSpheres part="ribosome" color="#5573cf" points={sub.big.pts} radii={sub.big.rad} anchor={[-0.75, 0.75, 0.2]} calloutDir={[-50, -50]} />
-      <InstancedSpheres part="ribosome" color="#d99a4e" points={sub.small.pts} radii={sub.small.rad} />
+      <Part part="ribosome" geometry={sub.big} position={[0, 0.22, 0]} roughness={0.68} anchor={[-0.75, 0.55, 0.2]} calloutDir={[-50, -50]} />
+      <Part part="ribosome" geometry={sub.small} color="#d99a4e" position={[0, -0.86, 0]} roughness={0.68} />
 
       {/* iRNK ladder: backbone + one coloured base per nucleotide, sliding through the ribosome */}
       <group ref={mrna}>
@@ -103,12 +141,12 @@ export default function Translation({ stage, reduced }: SceneProps) {
 
       {/* previous tRNA leaving (E side) and the current tRNA on its codon */}
       {stage > 0 && !isStop && (
-        <group position={[-W, 0.0, 0.32]}>
+        <group position={[-W, 0.0, 0.42]}>
           <TRNA codon={TRANSLATION_CODONS[stage - 1].codon} color={TRNA_COLORS[(stage - 1) % 3]} fading />
         </group>
       )}
       {!isStop && cur && (
-        <group ref={incoming} position={[0, 0, 0.32]}>
+        <group ref={incoming} position={[0, 0, 0.42]}>
           <TRNA codon={cur.codon} color={TRNA_COLORS[stage % 3]} amino={AMINO[stage % AMINO.length]} />
         </group>
       )}
