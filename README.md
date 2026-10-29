@@ -65,7 +65,7 @@ Biological facts come **only** from the two textbooks. Each book's facts stay in
 
 ## 3D
 
-Scenes are procedural React Three Fiber components; no third-party models are downloaded or hotlinked. The scenes are: neuron, reflex arc, spinal cord section, brain (per-lesson region emphasis), cell energy flow, DNA, ribosome translation, mitosis/meiosis, and a mitosis-vs-meiosis comparison (2.15).
+Scenes are procedural React Three Fiber components; no third-party models are downloaded or hotlinked. The scenes are: neuron, reflex arc, spinal cord section, brain (per-lesson region emphasis), cell energy flow, DNA, ribosome translation, mitosis/meiosis, prokaryotic binary fission (2.12, "Prokariot" / "Eukariot" modes), and a mitosis-vs-meiosis comparison (2.15).
 
 **Identification layer.** Every scene declares, in its topic manifest:
 - `what`: one sentence answering "Bu nima?";
@@ -87,9 +87,9 @@ The supplied visual references are stored in `docs/reference-images/` and mapped
 | `8-41-orqa-miya-kesimi` | 8 · 41 | spinal cord: cream white matter, inlaid grey matter, fanned root bundles, ganglia |
 | `8-40-refleks-yoyi` | 8 · 40, 45 | reflex arc: layered skin, glowing sensory fibre, interneuron, red motor fibre, striated muscle |
 | `10-2-8-energiya-oqimi` | 10 · 2.8 | cell energy: membrane, nucleus, mitochondria with cristae (section), glucose, ATP |
-| `10-2-10-dnk` | 10 · 2.10 | DNA: atom-bead backbones, base rungs, travelling polymerase |
-| `10-2-11-ribosoma` | 10 · 2.11 | ribosome: blob subunits, iRNK ladder, tRNAs, polypeptide |
-| `10-2-12-mitoz`, `10-2-13-meyoz`, `10-2-15-mitoz-meyoz` | 10 · 2.12, 2.13, 2.15 | beaded chromosomes, spindle and asters, crossing-over, synchronized comparison |
+| `10-2-10-dnk` | 10 · 2.10 | DNA: continuous sugar-phosphate backbones, base rungs aimed at the axis, replication fork, travelling polymerase |
+| `10-2-11-ribosoma` | 10 · 2.11 | ribosome: smooth organic subunits with a cleft, iRNK ladder, tRNAs, polypeptide |
+| `10-2-12-mitoz`, `10-2-13-meyoz`, `10-2-15-mitoz-meyoz` | 10 · 2.12, 2.13, 2.15 | smooth volumetric chromatids with centromere waist, fine spindle and asters, gradual crossing-over colour exchange, synchronized comparison; 2.12 also has a dedicated bacterium (p. 73) |
 | `10-2-14-virtual-mikroskop` | 10 · 2.14 | 2D canvas virtual microscope (stained onion root tip, 10×/40×) |
 
 **Viewer controls** (`viewerConfig.ts`, per model):
@@ -98,7 +98,14 @@ The supplied visual references are stored in `docs/reference-images/` and mapped
 - auto-rotation of about 30 s per turn that pauses on touch or selection and resumes after 6 s;
 - zoom pad, "Belgilar" labelled callouts, section toggle (brain sagittal cut, mitochondrion), stage playback, and fullscreen where the browser supports it.
 
-The models are procedural: closed volumes built from tapered tubes, displaced surfaces and instanced bead clusters, with no external GLB files. They read correctly from every angle and download nothing extra.
+The models are procedural: closed volumes built from tapered tubes, displaced surfaces and instanced clusters, with no external GLB files. They read correctly from every angle and download nothing extra. The brain sagittal cut removes the near hemisphere whole and draws inner structures as solid halves with flat cut faces, so no hollow shells show. The neuron grows a deterministic, tapering dendrite tree and a terminal arborization with boutons.
+
+**Measured** (production build, Chromium in the desktop app, Windows desktop GPU, viewport emulated at 414×896; not a real iPhone):
+- brain at 414×896: about 53 fps over a 3 s sample, worst frame 42 ms, JS heap about 15 MB;
+- six 3D routes (brain → spinal cord → reflex arc → DNA → 2.12 → 2.13) cycled four times in-app: one canvas alive at a time; the heap peaked at 58 MB between collections and returned to about 17 MB, with no upward trend;
+- no horizontal overflow at 414 px.
+
+Real-device performance on an iPhone 11 has not been measured.
 
 ## Highlights
 
