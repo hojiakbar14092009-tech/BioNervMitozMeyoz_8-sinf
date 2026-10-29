@@ -499,11 +499,38 @@ export const grade10Topics: Topic[] = [
       mode: 'mitosis',
       title: 'Mitoz bosqichlari',
       what: 'Eukariot hujayraning mitoz bilan bo‘linishi (sxema: 2n = 4).',
-      caption: 'Fazalar bo‘ylab yuring; xromosoma, urchuq va boshqa tuzilmalarni bosing.',
+      caption: 'Avval «Prokariot», so‘ng «Eukariot» rejimini tanlang va bosqichlar bo‘ylab yuring.',
+      modes: [
+        {
+          id: 'binary',
+          label: 'Prokariot',
+          title: 'Bakteriyaning ikkiga bo‘linishi',
+          what: 'Prokariot (bakteriya) hujayrasi ikkiga bo‘linish yo‘li bilan ko‘payadi (2.33-rasm).',
+          hotspots: [
+            { id: 'dnk', label: 'DNK', text: 'Bo‘linishdan oldin birinchi navbatda DNK replikatsiyalanadi; replikatsiya tugagach, DNKlar bir-biridan ajraladi.', page: 73, color: '#e0a64a' },
+            { id: 'membrana', label: 'Hujayra membranasi', text: 'Ichkariga botib kirib, sitoplazmani ikkiga bo‘ladi.', page: 73, color: '#5fb3a3' },
+            { id: 'sitoplazma', label: 'Sitoplazma', text: 'Membrana botib kirishi natijasida ikkiga bo‘linadi; natijada ikkita yangi bakteriya hosil bo‘ladi.', page: 73, color: '#a9d6cc' },
+          ],
+        },
+        {
+          id: 'mitosis',
+          label: 'Eukariot',
+          title: 'Mitoz bosqichlari',
+          what: 'Eukariot hujayraning mitoz bilan bo‘linishi (sxema: 2n = 4).',
+          hotspots: [
+            { id: 'xromosoma', label: 'Xromosoma', text: 'Sentromera bilan birikkan ikkita xromatidadan iborat; profazada spirallashib kaltalashadi va yo‘g‘onlashadi.', page: 73, color: '#6a63d6' },
+            { id: 'sentromera', label: 'Sentromera', text: 'Xromatidalarni tutashtiradi; bo‘linish urchug‘i iplari sentromeraga birikadi.', page: 73, color: '#4a4766' },
+            { id: 'urchuq', label: 'Bo‘linish urchug‘i', text: 'Axromatin iplari; qisqarib, xromosomalar (xromatidalar)ni qutblarga tortadi.', page: 74, color: '#d8c79c' },
+            { id: 'sentriola', label: 'Sentriola', text: 'Hayvon hujayralarida qarama-qarshi qutblarga tarqaladi; bo‘linish urchug‘i undan shakllanadi.', page: 73, color: '#d39a3f' },
+            { id: 'yadro', label: 'Yadro qobig‘i', text: 'Profazada parchalanadi, telofazada qayta hosil bo‘ladi.', page: 73, color: '#8a86b8' },
+            { id: 'ekvator', label: 'Ekvator tekisligi', text: 'Metafazada xromosomalar shu tekislikda joylashadi.', page: 73, color: '#8fbcc4' },
+          ],
+        },
+      ],
       hotspots: [
         { id: 'xromosoma', label: 'Xromosoma', text: 'Sentromera bilan birikkan ikkita xromatidadan iborat; profazada spirallashib kaltalashadi va yo‘g‘onlashadi.', page: 73, color: '#6a63d6' },
         { id: 'sentromera', label: 'Sentromera', text: 'Xromatidalarni tutashtiradi; bo‘linish urchug‘i iplari sentromeraga birikadi.', page: 73, color: '#4a4766' },
-        { id: 'urchuq', label: 'Bo‘linish urchug‘i', text: 'Axromatin iplari; qisqarib, xromosomalar (xromatidalar)ni qutblarga tortadi.', page: 74, color: '#e3b35c' },
+        { id: 'urchuq', label: 'Bo‘linish urchug‘i', text: 'Axromatin iplari; qisqarib, xromosomalar (xromatidalar)ni qutblarga tortadi.', page: 74, color: '#d8c79c' },
         { id: 'sentriola', label: 'Sentriola', text: 'Hayvon hujayralarida qarama-qarshi qutblarga tarqaladi; bo‘linish urchug‘i undan shakllanadi.', page: 73, color: '#d39a3f' },
         { id: 'yadro', label: 'Yadro qobig‘i', text: 'Profazada parchalanadi, telofazada qayta hosil bo‘ladi.', page: 73, color: '#8a86b8' },
         { id: 'ekvator', label: 'Ekvator tekisligi', text: 'Metafazada xromosomalar shu tekislikda joylashadi.', page: 73, color: '#8fbcc4' },
@@ -609,7 +636,7 @@ export const grade10Topics: Topic[] = [
       hotspots: [
         { id: 'xromosoma', label: 'Xromosoma', text: 'Sentromera bilan birikkan ikkita xromatidadan iborat; profazada spirallashib kaltalashadi va yo‘g‘onlashadi.', page: 76, color: '#4d6fd0' },
         { id: 'sentromera', label: 'Sentromera', text: 'Xromatidalarni tutashtiradi; bo‘linish urchug‘i iplari sentromeraga birikadi.', page: 76, color: '#4a4766' },
-        { id: 'urchuq', label: 'Bo‘linish urchug‘i', text: 'Axromatin iplari; qisqarib, xromosomalar (xromatidalar)ni qutblarga tortadi.', page: 77, color: '#e3b35c' },
+        { id: 'urchuq', label: 'Bo‘linish urchug‘i', text: 'Axromatin iplari; qisqarib, xromosomalar (xromatidalar)ni qutblarga tortadi.', page: 77, color: '#d8c79c' },
         { id: 'sentriola', label: 'Sentriola', text: 'Hayvon hujayralarida qarama-qarshi qutblarga tarqaladi; bo‘linish urchug‘i undan shakllanadi.', page: 76, color: '#d39a3f' },
         { id: 'yadro', label: 'Yadro qobig‘i', text: 'Profazada parchalanadi, telofazada qayta hosil bo‘ladi.', page: 76, color: '#8a86b8' },
         { id: 'ekvator', label: 'Ekvator tekisligi', text: 'Metafazada xromosomalar shu tekislikda joylashadi.', page: 76, color: '#8fbcc4' },
@@ -758,7 +785,7 @@ export const grade10Topics: Topic[] = [
       hotspots: [
         { id: 'xromosoma', label: 'Xromosoma', text: 'Sentromera bilan birikkan ikkita xromatidadan iborat; profazada spirallashib kaltalashadi va yo‘g‘onlashadi.', page: 77, color: '#6a63d6' },
         { id: 'sentromera', label: 'Sentromera', text: 'Xromatidalarni tutashtiradi; bo‘linish urchug‘i iplari sentromeraga birikadi.', page: 77, color: '#4a4766' },
-        { id: 'urchuq', label: 'Bo‘linish urchug‘i', text: 'Axromatin iplari; qisqarib, xromosomalar (xromatidalar)ni qutblarga tortadi.', page: 77, color: '#e3b35c' },
+        { id: 'urchuq', label: 'Bo‘linish urchug‘i', text: 'Axromatin iplari; qisqarib, xromosomalar (xromatidalar)ni qutblarga tortadi.', page: 77, color: '#d8c79c' },
         { id: 'sentriola', label: 'Sentriola', text: 'Hayvon hujayralarida qarama-qarshi qutblarga tarqaladi; bo‘linish urchug‘i undan shakllanadi.', page: 77, color: '#d39a3f' },
         { id: 'yadro', label: 'Yadro qobig‘i', text: 'Profazada parchalanadi, telofazada qayta hosil bo‘ladi.', page: 77, color: '#8a86b8' },
         { id: 'ekvator', label: 'Ekvator tekisligi', text: 'Metafazada xromosomalar shu tekislikda joylashadi.', page: 77, color: '#8fbcc4' },

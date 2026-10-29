@@ -128,8 +128,14 @@ const Icon = ({ d }: { d: string }) => (
   </svg>
 );
 
-export default function Viewer({ scene }: { scene: SceneConfig }) {
+export default function Viewer({ scene: base }: { scene: SceneConfig }) {
   const reduced = useReducedMotion();
+  const [modeIdx, setModeIdx] = useState(0);
+  const activeMode = base.modes?.[modeIdx];
+  const scene = useMemo<SceneConfig>(
+    () => (activeMode ? { ...base, mode: activeMode.id, title: activeMode.title, what: activeMode.what, hotspots: activeMode.hotspots } : base),
+    [base, activeMode],
+  );
   const cfg = VIEWER[scene.key];
   const figure = useRef<HTMLElement>(null);
   const host = useRef<HTMLDivElement>(null);
@@ -220,6 +226,28 @@ export default function Viewer({ scene }: { scene: SceneConfig }) {
           <strong>Bu nima?</strong> {scene.what}
         </p>
       </header>
+
+      {base.modes && (
+        <div className="seg mode-switch" role="tablist" aria-label="Model turi">
+          {base.modes.map((m, i) => (
+            <button
+              key={m.id}
+              type="button"
+              role="tab"
+              aria-selected={i === modeIdx}
+              className={i === modeIdx ? 'on' : ''}
+              onClick={() => {
+                setModeIdx(i);
+                setStage(0);
+                setSelected(null);
+                setPlaying(false);
+              }}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div ref={host} className="viewer-stage">
         {!webgl ? (

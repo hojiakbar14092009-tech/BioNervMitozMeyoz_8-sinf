@@ -3,6 +3,7 @@ import { makeRootTip } from '../features/interactives/Microscope';
 import { PRESETS, VIEWER, presetDirection } from '../features/three/viewerConfig';
 import { modelReferences } from '../data/modelReferences';
 import { getTopic, topicsByBook } from '../data/registry';
+import { binaryStages } from '../features/division/stages';
 
 describe('virtual microscope preparation', () => {
   const cells = makeRootTip();
@@ -45,5 +46,21 @@ describe('reference images', () => {
     }
     for (const r of modelReferences) for (const k of r.topicKeys) expect(getTopic(k)?.bookId).toBe(r.bookId);
     expect(new Set(modelReferences.map((r) => r.referenceFile)).size).toBe(modelReferences.length);
+  });
+});
+
+describe('2.12 prokaryote division model', () => {
+  const scene = getTopic('grade10-2-12')?.scene;
+  it('offers Prokariot (binary fission) and Eukariot (mitosis) modes', () => {
+    expect(scene?.modes?.map((m) => m.id)).toEqual(['binary', 'mitosis']);
+  });
+  it('binary fission has the five textbook steps and page-cited structures', () => {
+    expect(binaryStages).toHaveLength(5);
+    const binary = scene?.modes?.find((m) => m.id === 'binary');
+    expect(binary?.hotspots.map((h) => h.id).sort()).toEqual(['dnk', 'membrana', 'sitoplazma']);
+    for (const h of binary?.hotspots ?? []) expect(h.page).toBe(73);
+  });
+  it('every scene used by a topic has a viewer config', () => {
+    for (const t of [...topicsByBook.grade8, ...topicsByBook.grade10]) if (t.scene) expect(VIEWER[t.scene.key]).toBeDefined();
   });
 });

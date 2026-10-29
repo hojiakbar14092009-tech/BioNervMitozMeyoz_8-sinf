@@ -1,10 +1,11 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
 import { compareSteps, framesFor, meiosisFrames, mitosisFrames, type Chromatid, type Frame } from '../../division/stages';
 import { Callout, Membrane, Part, rand, useSelection } from './common';
+import Binary from './Binary';
 
 // Reference 3 (mitosis): violet/indigo chromatin. Reference 5 (meiosis): blue paternal, red maternal homologs.
 const PALETTES = {
@@ -13,65 +14,81 @@ const PALETTES = {
 };
 type Pal = (typeof PALETTES)['mitosis'];
 
-const BEAD = 0.026;
-const geoCache = new THREE.IcosahedronGeometry(1, 1);
+const RADIAL = 20;
+const ALONG = 48;
 
-/** Bead positions along a chromatid (local x), with a centromere waist and rounded tips. */
-function chromatidBeads(len: number, seed: number) {
-  const n = Math.max(6, Math.round(len / BEAD));
-  return Array.from({ length: n + 1 }, (_, i) => {
-    const t = i / n;
-    const waist = 1 - 0.32 * Math.exp(-(((t - 0.5) / 0.07) ** 2));
-    const tip = Math.sin(Math.PI * Math.min(1, t * 1.05 + 0.02)) ** 0.25;
-    const r = 0.05 * waist * (0.55 + 0.45 * tip);
-    // slight coil so it reads as condensed chromatin, not a smooth rod
-    return { x: (t - 0.5) * len, y: Math.sin(i * 1.9 + seed) * r * 0.25, z: Math.cos(i * 2.3 + seed) * r * 0.25, r: r * (0.9 + rand(i, seed) * 0.25), t };
-  });
+/**
+ * Smooth volumetric chromatid along local x: closed surface (radius → 0 at the tips), a waist at the
+ * centromere, and low-amplitude relief so it reads as condensed chromatin rather than a rod or bead chain.
+ * Vertex attribute `t` (0…1 along the arm) drives the crossing-over colour blend.
+ */
+function chromatidGeometry(len: number, seed: number) {
+  const pos: number[] = [];
+  const ts: number[] = [];
+  const idx: number[] = [];
+  for (let i = 0; i <= ALONG; i++) {
+    const t = i / ALONG;
+    const waist = 1 - 0.34 * Math.exp(-(((t - 0.5) / 0.065) ** 2));
+    const tip = Math.sin(Math.PI * t) ** 0.42;
+    const r0 = 0.052 * waist * tip;
+    const x = (t - 0.5) * len;
+    for (let j = 0; j <= RADIAL; j++) {
+      const a = (j / RADIAL) * Math.PI * 2;
+      const relief = 1 + 0.07 * Math.sin(t * 46 + a * 3 + seed) + 0.04 * Math.sin(t * 91 - a * 5 + seed * 2);
+      const r = r0 * relief;
+      pos.push(x, Math.cos(a) * r, Math.sin(a) * r);
+      ts.push(t);
+    }
+  }
+  for (let i = 0; i < ALONG; i++)
+    for (let j = 0; j < RADIAL; j++) {
+      const a = i * (RADIAL + 1) + j;
+      const b = a + RADIAL + 1;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(pos.length), 3));
+  g.userData.t = ts;
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
 }
 
-/** One chromatid as a single instanced draw; crossing-over segments blend colour in over time. */
-function ChromatidBeads({ c, pal, reduced, anchor }: { c: Chromatid; pal: Pal; reduced: boolean; anchor?: boolean }) {
-  const mesh = useRef<THREE.InstancedMesh>(null);
+/** One chromatid; crossing-over blends the far arm (t > 0.62) toward the homologue's colour over time. */
+function ChromatidMesh({ c, pal, reduced, anchor }: { c: Chromatid; pal: Pal; reduced: boolean; anchor?: boolean }) {
   const group = useRef<THREE.Group>(null);
   const { selected, select, labels, anchors, showLabels } = useSelection();
-  const beads = useMemo(() => chromatidBeads(c.len, c.id.charCodeAt(0) + c.id.charCodeAt(2)), [c.len, c.id]);
+  const geo = useMemo(() => chromatidGeometry(c.len, c.id.charCodeAt(0) + c.id.charCodeAt(2) * 3), [c.len, c.id]);
+  useEffect(() => () => geo.dispose(), [geo]);
   const mix = useRef(c.tip ? 0 : 1);
   const on = selected === 'xromosoma';
   const dim = selected !== null && !on;
   const own = useMemo(() => new THREE.Color(pal[c.color]), [pal, c.color]);
   const other = useMemo(() => new THREE.Color(pal[c.tip ?? c.color]), [pal, c.tip, c.color]);
 
-  // the far arm segment (t > 0.62) takes the homologue's colour as crossing-over progresses (w: 0…1)
-  const paint = (m: THREE.InstancedMesh, w: number) => {
-    const col = new THREE.Color();
-    beads.forEach((b, i) => {
-      const k = c.tip && b.t > 0.62 ? THREE.MathUtils.smoothstep(w, (b.t - 0.62) * 0.8, (b.t - 0.62) * 0.8 + 0.5) : 0;
-      m.setColorAt(i, col.copy(own).lerp(other, k));
-    });
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
+  const paint = (w: number) => {
+    const col = geo.attributes.color as THREE.BufferAttribute;
+    const t = geo.userData.t as number[];
+    const tmp = new THREE.Color();
+    for (let i = 0; i < t.length; i++) {
+      // exchange front travels outward from the crossing region toward the tip
+      const k = c.tip && t[i] > 0.6 ? THREE.MathUtils.smoothstep(w, (t[i] - 0.6) * 1.1, (t[i] - 0.6) * 1.1 + 0.35) : 0;
+      tmp.copy(own).lerp(other, k);
+      col.setXYZ(i, tmp.r, tmp.g, tmp.b);
+    }
+    col.needsUpdate = true;
   };
 
   useLayoutEffect(() => {
-    const m = mesh.current;
-    if (!m) return;
-    const o = new THREE.Object3D();
-    beads.forEach((b, i) => {
-      o.position.set(b.x, b.y, b.z);
-      o.scale.setScalar(b.r);
-      o.updateMatrix();
-      m.setMatrixAt(i, o.matrix);
-    });
-    m.instanceMatrix.needsUpdate = true;
-    m.computeBoundingSphere();
     mix.current = reduced || !c.tip ? 1 : 0; // the exchange replays when crossing-over first appears
-    paint(m, mix.current);
+    paint(mix.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [beads, own, other, c.tip, reduced]);
+  }, [geo, own, other, c.tip, reduced]);
 
   useFrame((_, dt) => {
     const g = group.current;
-    const m = mesh.current;
-    if (!g || !m) return;
+    if (!g) return;
     const k = reduced ? 1 : 1 - Math.exp(-dt * 3.2);
     g.position.x += (c.x - g.position.x) * k;
     g.position.y += (c.y - g.position.y) * k;
@@ -79,24 +96,23 @@ function ChromatidBeads({ c, pal, reduced, anchor }: { c: Chromatid; pal: Pal; r
     g.rotation.z += (c.rot - g.rotation.z) * k;
     g.scale.setScalar(g.scale.x + (c.scale - g.scale.x) * k);
     if (c.tip && mix.current < 1) {
-      mix.current = Math.min(1, mix.current + dt * 0.6);
-      paint(m, mix.current);
+      mix.current = Math.min(1, mix.current + dt * 0.5);
+      paint(mix.current);
     }
   });
 
   return (
     <group ref={group} position={[c.x, c.y, c.z ?? 0]} rotation={[0, 0, c.rot]} scale={c.scale}>
-      <instancedMesh
-        ref={mesh}
-        args={[geoCache, undefined, beads.length]}
+      <mesh
+        geometry={geo}
         onClick={(e) => {
           if (e.delta > 8) return;
           e.stopPropagation();
           select(on ? null : 'xromosoma');
         }}
       >
-        <meshStandardMaterial key={dim ? 't' : 'o'} roughness={0.5} envMapIntensity={0.9} emissive={on ? '#b9a6ff' : '#000'} emissiveIntensity={on ? 0.22 : 0} transparent={dim} opacity={dim ? 0.4 : 1} />
-      </instancedMesh>
+        <meshStandardMaterial key={dim ? 't' : 'o'} vertexColors roughness={0.55} envMapIntensity={0.9} emissive={on ? '#b9a6ff' : '#000'} emissiveIntensity={on ? 0.22 : 0} transparent={dim} opacity={dim ? 0.4 : 1} />
+      </mesh>
       {anchor && (showLabels || (on && anchors)) && (
         <Html position={[0, 0.06, 0]} zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
           <Callout part="xromosoma" dir={[-70, -50]} on={on} label={labels.xromosoma} color={pal.p} select={select} />
@@ -176,11 +192,11 @@ function Inclusions({ r, seed }: { r: number; seed: number }) {
 }
 
 function DivisionFrame({ f, pal, reduced, prefix = '' }: { f: Frame; pal: Pal; reduced: boolean; prefix?: string }) {
-  const { selected, colors } = useSelection();
+  const { selected } = useSelection();
   const beads = useMemo(() => centromeres(f), [f]);
   const metaphase = f.id.startsWith('metafaza');
   const spindleOn = selected === 'urchuq';
-  const spindleCol = spindleOn ? '#ffd98a' : (colors.urchuq ?? '#e3b35c');
+  const spindleCol = spindleOn ? '#f4d58e' : '#d8c79c';
   return (
     <group>
       {f.cells.map((cell, i) => (
@@ -210,20 +226,20 @@ function DivisionFrame({ f, pal, reduced, prefix = '' }: { f: Frame; pal: Pal; r
         cell.poles?.map(([px, py], k) => {
           const [ox, oy] = cell.poles![1 - k];
           const away = new THREE.Vector2(px - ox, py - oy).normalize();
-          const rays = Array.from({ length: 7 }, (_, j) => {
-            const a = Math.atan2(away.y, away.x) + (j - 3) * 0.33;
-            return [[px, py, 0], [px + Math.cos(a) * 0.2, py + Math.sin(a) * 0.2, (rand(j, k + i) - 0.5) * 0.2]] as [number, number, number][];
+          const rays = Array.from({ length: 5 }, (_, j) => {
+            const a = Math.atan2(away.y, away.x) + (j - 2) * 0.4;
+            return [[px, py, 0], [px + Math.cos(a) * 0.15, py + Math.sin(a) * 0.15, (rand(j, k + i) - 0.5) * 0.2]] as [number, number, number][];
           });
           const fibres = f.chromatids
             .filter((c) => Math.hypot(c.x - cell.x, c.y - cell.y) < cell.r && c.scale > 0.6 && Math.hypot(c.x - px, c.y - py) <= Math.hypot(c.x - ox, c.y - oy) + 0.02)
             .map((c) => [[px, py, 0], [(px + c.x) / 2, (py + c.y) / 2, (c.z ?? 0) / 2], [c.x, c.y, c.z ?? 0]] as [number, number, number][]);
           return [...fibres, ...rays].map((pts, j) => (
-            <Line key={`${prefix}${f.id}-${i}-${k}-${j}`} points={pts} color={spindleCol} lineWidth={spindleOn ? 1.8 : 1.1} transparent opacity={selected && !spindleOn ? 0.18 : 0.62} />
+            <Line key={`${prefix}${f.id}-${i}-${k}-${j}`} points={pts} color={spindleCol} lineWidth={spindleOn ? 1.6 : 0.9} transparent opacity={selected && !spindleOn ? 0.15 : 0.5} />
           ));
         }),
       )}
       {f.chromatids.map((c, i) => (
-        <ChromatidBeads key={prefix + c.id} c={c} pal={pal} reduced={reduced} anchor={i === 0} />
+        <ChromatidMesh key={prefix + c.id} c={c} pal={pal} reduced={reduced} anchor={i === 0} />
       ))}
       {beads.map((b, i) => (
         <Tween key={prefix + 'cm' + b.id} x={b.x} y={b.y} z={b.z} reduced={reduced}>
@@ -239,6 +255,7 @@ function DivisionFrame({ f, pal, reduced, prefix = '' }: { f: Frame; pal: Pal; r
 const fitScale = (f: Frame, wide: number, single: number) => (f.cells.some((c) => Math.abs(c.x) > 0.8) ? wide : single);
 
 export default function Division({ scene, stage, reduced }: SceneProps) {
+  if (scene.mode === 'binary') return <Binary stage={stage} reduced={reduced} />;
   if (scene.mode === 'compare') {
     const s = compareSteps[Math.min(stage, compareSteps.length - 1)];
     const mi = mitosisFrames[s.mi];

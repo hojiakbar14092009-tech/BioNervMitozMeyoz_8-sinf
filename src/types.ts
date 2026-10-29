@@ -43,7 +43,9 @@ export interface SceneConfig {
   caption: string;
   /** Which brain regions / structures to emphasise, scene-specific ids. */
   focus?: string[];
-  mode?: 'mitosis' | 'meiosis' | 'compare';
+  mode?: 'mitosis' | 'meiosis' | 'compare' | 'binary';
+  /** Alternative models inside one viewer (2.12: Prokariot / Eukariot), each with its own identity and structures. */
+  modes?: { id: 'binary' | 'mitosis'; label: string; title: string; what: string; hotspots: Hotspot[] }[];
   /** Explicit process stages (timeline); division/translation stages are derived from their data. */
   stages?: { name: string; text: string }[];
   hotspots: Hotspot[];

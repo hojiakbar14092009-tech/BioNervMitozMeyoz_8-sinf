@@ -42,7 +42,7 @@ export function validateContent(): string[] {
       seenRoutes.add(route);
       if (!t.sections.length || !t.important.length || !t.summary) errors.push(`${t.key}: missing content`);
       if (!/^#[0-9a-f]{6}$/i.test(t.theme.accent) || !/^#[0-9a-f]{6}$/i.test(t.theme.accentDark)) errors.push(`${t.key}: invalid theme`);
-      for (const h of t.scene?.hotspots ?? []) {
+      for (const h of [...(t.scene?.hotspots ?? []), ...(t.scene?.modes?.flatMap((m) => m.hotspots) ?? [])]) {
         if (h.page < t.pages[0] - 4 || h.page > t.pages[1]) errors.push();
         if (!/^#[0-9a-f]{6}$/i.test(h.color)) errors.push();
       }

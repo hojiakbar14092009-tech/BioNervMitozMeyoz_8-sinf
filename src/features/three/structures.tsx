@@ -1,5 +1,5 @@
 import type { Hotspot, SceneConfig } from '../../types';
-import { compareSteps, framesFor, groupOf, meiosisFrames, mitosisFrames } from '../division/stages';
+import { binaryStages, compareSteps, framesFor, groupOf, meiosisFrames, mitosisFrames } from '../division/stages';
 import { TRANSLATION_CODONS } from './sequences';
 
 export interface Stage {
@@ -19,6 +19,7 @@ export function stagesOf(scene: SceneConfig): Stage[] | null {
       group: `Mitoz: ${mitosisFrames[s.mi].name} · ${groupOf('meiosis', s.me)}: ${meiosisFrames[s.me].name}`,
     }));
   const mode = scene.mode;
+  if (scene.key === 'division' && mode === 'binary') return binaryStages.map((s) => ({ ...s, group: 'Prokariot' }));
   if (scene.key === 'division' && (mode === 'mitosis' || mode === 'meiosis')) {
     return framesFor(mode).map((f, i) => ({ name: f.name, text: f.text, group: groupOf(mode, i), formula: f.formula }));
   }

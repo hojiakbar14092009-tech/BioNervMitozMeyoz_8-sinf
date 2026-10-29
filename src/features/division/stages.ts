@@ -290,3 +290,12 @@ export const compareSteps: { mi: number; me: number; note: string }[] = [
   { mi: 5, me: 7, note: 'Anafaza II: xromatidalar qutblarga tortiladi va mustaqil xromosomaga aylanadi.' },
   { mi: 5, me: 8, note: 'Natija: mitozda 2 ta bir xil diploid hujayra; meyozda 4 ta bir-biridan farq qiluvchi gaploid hujayra (1n1c).' },
 ];
+
+// 2.12 prokaryote (bacterium) binary fission — wording follows Biologiya 10, p.73.
+export const binaryStages: { name: string; text: string }[] = [
+  { name: 'Bakteriya hujayrasi', text: 'Bakteriyalar ikkiga bo‘linish yo‘li bilan ko‘payadi.' },
+  { name: 'DNK replikatsiyasi', text: 'Bakteriyalarda birinchi navbatda DNK replikatsiyalanadi.' },
+  { name: 'DNKlarning ajralishi', text: 'Replikatsiya tugagach, DNKlar bir-biridan ajralib chiqadi.' },
+  { name: 'Membrananing botib kirishi', text: 'Hujayra membranasi ichkariga botib kirib, sitoplazma ikkiga bo‘linadi.' },
+  { name: 'Ikki yangi bakteriya', text: 'Natijada yangi bakteriyalar hosil bo‘ladi. Ko‘payish geometrik progressiya asosida boradi (2, 4, 8, 16, 32...); qulay sharoitda ba’zi bakteriyalar har yigirma daqiqada bo‘linadi.' },
+];
