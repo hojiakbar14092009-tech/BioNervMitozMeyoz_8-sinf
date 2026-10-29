@@ -2,6 +2,7 @@ import type { BookId, Topic, TopicKey } from '../types';
 import { books } from './books';
 import { grade8Topics } from './grade8/topics';
 import { grade10Topics } from './grade10/topics';
+import { modelReferences } from './modelReferences';
 
 export const topicsByBook: Record<BookId, Topic[]> = { grade8: grade8Topics, grade10: grade10Topics };
 
@@ -54,6 +55,14 @@ export function validateContent(): string[] {
       for (const s of t.sections) {
         if (s.page < t.pages[0] - 4 || s.page > t.pages[1]) errors.push(`${t.key}/${s.id}: page ${s.page} outside lesson`);
       }
+    }
+  }
+  for (const ref of modelReferences) {
+    for (const key of ref.topicKeys) {
+      const t = getTopic(key);
+      if (!t || t.bookId !== ref.bookId) errors.push(`${ref.referenceFile}: wrong book/topic ${key}`);
+      else if (ref.scene === 'microscope' ? t.interactive !== 'microscope' : t.scene?.key !== ref.scene || (ref.mode && t.scene.mode !== ref.mode))
+        errors.push(`${ref.referenceFile}: mapped to ${key} but that lesson has no ${ref.scene}${ref.mode ? `/${ref.mode}` : ''} model`);
     }
   }
   return errors;

@@ -1,42 +1,55 @@
 import { useEffect, useMemo } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
-import { Outlines } from '@react-three/drei';
+import { Html, Outlines } from '@react-three/drei';
 import * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
-import { Part, useSelection } from './common';
+import { Callout, Part, TaperTube, useSelection } from './common';
 
 type Lobe = 'frontal' | 'parietal' | 'temporal' | 'occipital';
 const LOBES: Lobe[] = ['frontal', 'parietal', 'temporal', 'occipital'];
+// Reference sheet palette: coral frontal, blue parietal, green occipital, golden temporal — softened for long study.
 const BASE: Record<Lobe, THREE.Color> = {
-  frontal: new THREE.Color('#d9a49b'),
-  parietal: new THREE.Color('#d6ae9c'),
-  temporal: new THREE.Color('#cf9ea7'),
-  occipital: new THREE.Color('#d1a3b5'),
+  frontal: new THREE.Color('#df7f74'),
+  parietal: new THREE.Color('#6683d2'),
+  temporal: new THREE.Color('#d8a95e'),
+  occipital: new THREE.Color('#62a873'),
 };
-const HIGHLIGHT = new THREE.Color('#f0c879');
-const DIM = new THREE.Color('#8f8796');
-const SULCUS = new THREE.Color('#9c6f6c');
-const INNER = ['medulla', 'pons', 'midbrain', 'diencephalon'];
+const NEUTRAL = new THREE.Color('#d9a49b'); // lessons that don't teach lobes keep a natural tissue tone
+const HIGHLIGHT = new THREE.Color('#f4cf7e');
+const DIM = new THREE.Color('#7d7787');
+const SULCUS = new THREE.Color('#5e3c3c');
+const INNER = ['medulla', 'pons', 'midbrain', 'diencephalon', 'corpus'];
 
-// Front of the brain points to −x, top to +y; the left hemisphere faces the camera (+z).
+// Front of the brain points to −x, top to +y; the left hemisphere faces +z.
+// Boundaries follow the same curves as the grooves: slanted central sulcus, lateral sulcus, parieto-occipital.
 function lobeOf(nx: number, ny: number): Lobe {
-  if (nx < -0.2) return 'frontal';
-  if (nx > 0.62) return 'occipital';
-  if (ny < -0.12) return 'temporal';
+  if (nx < -0.2 + ny * 0.25 && ny > -0.12 + nx * 0.06) return 'frontal';
+  if (nx > 0.62 - ny * 0.08) return 'occipital';
+  if (ny < -0.12 + nx * 0.06) return nx < -0.35 ? 'frontal' : 'temporal';
   return 'parietal';
 }
 
 /** Depth of the major grooves that separate lobes (lateral, central, parieto-occipital). */
 function sulcusDepth(nx: number, ny: number) {
-  const lateral = nx > -0.35 && nx < 0.65 ? Math.exp(-(((ny + 0.12) / 0.045) ** 2)) : 0;
-  const central = ny > -0.12 ? Math.exp(-(((nx + 0.2 - ny * 0.25) / 0.04) ** 2)) : 0;
-  const po = ny > -0.3 ? Math.exp(-(((nx - 0.62) / 0.035) ** 2)) : 0;
-  return Math.max(lateral, central * 0.8, po * 0.7);
+  const lateral = nx > -0.35 && nx < 0.65 ? Math.exp(-(((ny + 0.12 - nx * 0.06) / 0.04) ** 2)) : 0;
+  const central = ny > -0.12 ? Math.exp(-(((nx + 0.2 - ny * 0.25) / 0.035) ** 2)) : 0;
+  const po = ny > -0.3 ? Math.exp(-(((nx - 0.62) / 0.03) ** 2)) : 0;
+  return Math.max(lateral, central * 0.85, po * 0.75);
+}
+
+/** Domain-warped ridged folds: meandering gyri separated by narrow sulci, consistent all round the volume. */
+function gyri(x: number, y: number, z: number) {
+  const wx = x + 0.35 * Math.sin(y * 5.1 + z * 3.7);
+  const wy = y + 0.35 * Math.sin(z * 4.3 + x * 4.9);
+  const wz = z + 0.35 * Math.sin(x * 5.7 + y * 3.3);
+  const a = Math.sin(wx * 10 + Math.sin(wy * 6) * 1.6) * Math.sin(wy * 11 + Math.cos(wz * 5) * 1.4) * Math.sin(wz * 9 + wx * 2);
+  const ridge = 1 - Math.abs(a);
+  return ridge * ridge;
 }
 
 function useHemisphere(side: 1 | -1) {
   return useMemo(() => {
-    const g = new THREE.SphereGeometry(1, 160, 110);
+    const g = new THREE.SphereGeometry(1, 200, 140);
     const pos = g.attributes.position as THREE.BufferAttribute;
     const lobes: Lobe[] = [];
     const groove: number[] = [];
@@ -45,13 +58,10 @@ function useHemisphere(side: 1 | -1) {
       v.fromBufferAttribute(pos, i);
       lobes.push(lobeOf(v.x, v.y));
       const s = sulcusDepth(v.x, v.y);
-      groove.push(s);
-      // gyri: ridged, meandering folds (1 - |sin|) read as convolutions rather than noise
-      const a = Math.sin(v.x * 15 + Math.sin(v.y * 7 + v.z * 4) * 2.2);
-      const b = Math.sin(v.y * 17 + Math.cos(v.x * 6) * 1.8 + v.z * 5);
-      const gyri = (1 - Math.abs(a * b)) * 0.055 - 0.027;
+      const f = gyri(v.x, v.y, v.z);
+      groove.push(Math.max(s, (1 - f) * 0.35));
       const flat = side * v.z < 0 ? 0.5 : 1; // medial surface flattened
-      v.multiplyScalar(1 + gyri - s * 0.06);
+      v.multiplyScalar(1 + f * 0.07 - 0.035 - s * 0.085);
       pos.setXYZ(i, v.x * 1.25, v.y * 0.92 * (v.y < 0 ? 0.78 : 1), v.z * 0.62 * flat);
     }
     g.computeVertexNormals();
@@ -60,23 +70,25 @@ function useHemisphere(side: 1 | -1) {
   }, [side]);
 }
 
-function Hemisphere({ side, hotspots }: { side: 1 | -1; hotspots: string[] }) {
-  const { selected, select } = useSelection();
+function Hemisphere({ side, hotspots, lobeColors }: { side: 1 | -1; hotspots: string[]; lobeColors: boolean }) {
+  const { selected, select, clipPlane } = useSelection();
   const { geometry, lobes, groove } = useHemisphere(side);
-  const inner = selected !== null && INNER.includes(selected);
+  const inner = selected !== null && INNER.includes(selected) && !clipPlane;
+  const cut = side === 1 && clipPlane;
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => {
     const col = geometry.attributes.color as THREE.BufferAttribute;
     const lobeFocus = selected !== null && (LOBES.includes(selected as Lobe) || selected.endsWith('-left') || selected === 'hemispheres');
     const c = new THREE.Color();
     lobes.forEach((lobe, i) => {
+      const base = lobeColors ? BASE[lobe] : NEUTRAL;
       const hit = selected === lobe || selected === 'hemispheres' || (side === 1 && selected === `${lobe}-left`);
-      c.copy(hit ? HIGHLIGHT : lobeFocus || (selected && !inner) ? BASE[lobe].clone().lerp(DIM, 0.5) : BASE[lobe]);
-      c.lerp(SULCUS, groove[i] * 0.55); // grooves read darker
+      c.copy(hit ? HIGHLIGHT : lobeFocus || (selected && !inner) ? base.clone().lerp(DIM, 0.55) : base);
+      c.lerp(SULCUS, groove[i] * 0.6);
       col.setXYZ(i, c.r, c.g, c.b);
     });
     col.needsUpdate = true;
-  }, [selected, geometry, lobes, groove, side, inner]);
+  }, [selected, geometry, lobes, groove, side, inner, lobeColors]);
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 8 || !e.face) return;
@@ -88,54 +100,108 @@ function Hemisphere({ side, hotspots }: { side: 1 | -1; hotspots: string[] }) {
 
   return (
     <mesh geometry={geometry} position={[0, 0.25, side * 0.36]} onClick={onClick} onPointerOver={() => (document.body.style.cursor = 'pointer')} onPointerOut={() => (document.body.style.cursor = '')}>
-      <meshStandardMaterial key={inner ? 't' : 'o'} vertexColors roughness={0.72} envMapIntensity={0.85} transparent={inner} opacity={inner ? 0.16 : 1} depthWrite={!inner} />
-      {selected === 'hemispheres' && <Outlines thickness={0.012} color="#f2d28c" />}
+      <meshStandardMaterial
+        key={`${inner ? 't' : 'o'}${cut ? 'c' : ''}`}
+        vertexColors
+        roughness={0.66}
+        envMapIntensity={0.9}
+        transparent={inner}
+        opacity={inner ? 0.16 : 1}
+        depthWrite={!inner}
+        clippingPlanes={cut ? [clipPlane] : undefined}
+        side={cut ? THREE.DoubleSide : THREE.FrontSide}
+      />
+      {selected === 'hemispheres' && !cut && <Outlines thickness={0.012} color="#f2d28c" />}
     </mesh>
   );
 }
 
-/** Brainstem as one tapered column: midbrain → pons → medulla continuing into the spinal cord. */
-const STEM: [number, number, number, string, string][] = [
-  // [y, radius x, radius z, part id, colour]
-  [-0.42, 0.17, 0.16, 'midbrain', '#b98aa0'],
-  [-0.72, 0.23, 0.21, 'pons', '#c6a07c'],
-  [-1.05, 0.14, 0.13, 'medulla', '#a9b98c'],
-];
-
-export default function Brain({ scene }: SceneProps) {
-  const ids = scene.hotspots.map((h) => h.id);
-  const has = (id: string) => ids.includes(id);
-  const cerebellum = useMemo(() => {
-    const g = new THREE.SphereGeometry(0.42, 64, 48);
-    const pos = g.attributes.position as THREE.BufferAttribute;
+/** Cerebellum: fine parallel folia, as in the reference sheet. */
+function useCerebellum() {
+  const g = useMemo(() => {
+    const geo = new THREE.SphereGeometry(0.42, 96, 72);
+    const pos = geo.attributes.position as THREE.BufferAttribute;
     const v = new THREE.Vector3();
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
-      v.multiplyScalar(1 + Math.sin(v.y * 70 + v.x * 6) * 0.018); // fine parallel folia
+      const folia = Math.sin(v.y * 95 + v.x * 9 + Math.sin(v.z * 8) * 2);
+      v.multiplyScalar(1 + folia * 0.016 - Math.abs(folia) * 0.01);
       pos.setXYZ(i, v.x, v.y, v.z);
     }
-    g.computeVertexNormals();
-    return g;
+    geo.computeVertexNormals();
+    return geo;
   }, []);
-  useEffect(() => () => cerebellum.dispose(), [cerebellum]);
+  useEffect(() => () => g.dispose(), [g]);
+  return g;
+}
+
+type P = [number, number, number];
+// Callout points on the left (near) hemisphere surface for vertex-coloured regions.
+const LOBE_ANCHORS: Record<string, { at: P; dir: [number, number] }> = {
+  frontal: { at: [-1.0, 0.6, 0.86], dir: [20, -62] },
+  parietal: { at: [0.2, 1.05, 0.72], dir: [70, 18] },
+  temporal: { at: [0.05, -0.3, 0.98], dir: [-80, 30] },
+  occipital: { at: [1.2, 0.35, 0.74], dir: [-30, -70] },
+  hemispheres: { at: [-0.3, 1.0, 0.7], dir: [-70, -40] },
+  'frontal-left': { at: [-1.0, 0.6, 0.86], dir: [20, -62] },
+  'occipital-left': { at: [1.2, 0.35, 0.74], dir: [-30, -70] },
+};
+
+function RegionCallouts({ ids }: { ids: string[] }) {
+  const { selected, select, showLabels, anchors, labels, colors } = useSelection();
+  return (
+    <>
+      {ids
+        .filter((id) => LOBE_ANCHORS[id] && (showLabels || (anchors && selected === id)))
+        .map((id) => (
+          <Html key={id} position={LOBE_ANCHORS[id].at} zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+            <Callout part={id} dir={LOBE_ANCHORS[id].dir} on={selected === id} label={labels[id]} color={colors[id]} select={select} />
+          </Html>
+        ))}
+    </>
+  );
+}
+
+const CORD: P[] = [[0.5, -1.15, 0], [0.56, -1.6, 0], [0.6, -2.15, 0]];
+const ROOTS: P[][] = [-1, 1].flatMap((s) => [
+  [[0.56, -1.7, 0], [0.62, -1.85, s * 0.18], [0.7, -2.05, s * 0.32]] as P[],
+  [[0.59, -1.95, 0], [0.66, -2.1, s * 0.2], [0.74, -2.3, s * 0.34]] as P[],
+]);
+
+export default function Brain({ scene }: SceneProps) {
+  const ids = scene.hotspots.map((h) => h.id);
+  const has = (id: string) => (ids.includes(id) ? id : undefined);
+  const lobeColors = ids.some((id) => LOBES.includes(id as Lobe) || id.endsWith('-left'));
+  const cerebellum = useCerebellum();
 
   return (
-    <group rotation={[0.05, -0.3, 0]} position={[0, 0.15, 0]}>
-      <Hemisphere side={1} hotspots={ids} />
-      <Hemisphere side={-1} hotspots={ids} />
-      <Part part={has('diencephalon') ? 'diencephalon' : undefined} color="#c58f8a" position={[0.1, -0.15, 0]} scale={[1.25, 0.8, 0.95]} anchor={[0, 0.35, 0.3]}>
-        <icosahedronGeometry args={[0.24, 4]} />
+    <group rotation={[0.04, 0, 0]} position={[0, 0.35, 0]}>
+      <Hemisphere side={1} hotspots={ids} lobeColors={lobeColors} />
+      <Hemisphere side={-1} hotspots={ids} lobeColors={lobeColors} />
+      <RegionCallouts ids={ids} />
+      {/* corpus callosum: arch joining the hemispheres (visible in the sagittal cut) */}
+      <Part internal part={has('corpus')} color="#efe3cf" position={[0.05, 0.12, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 1, 0.55]} clip anchor={[0, 0.1, -0.5]} calloutDir={[-70, -40]}>
+        <torusGeometry args={[0.52, 0.06, 14, 48, Math.PI]} />
       </Part>
-      {STEM.map(([y, rx, rz, id, color], i) => (
-        <Part key={id} part={has(id) ? id : undefined} color={color} position={[0.32 + i * 0.09, y, 0]} rotation={[0, 0, -0.22]} scale={[rx, i === 1 ? 0.2 : 0.24, rz]} anchor={[2.2, 0.2, 1.4]}>
-          <sphereGeometry args={[1, 32, 24]} />
-        </Part>
+      <Part internal part={has('diencephalon')} color="#c99089" position={[0.12, -0.12, 0]} scale={[1.25, 0.82, 0.95]} clip anchor={[0, 0.3, 0.3]} calloutDir={[-80, -30]}>
+        <icosahedronGeometry args={[0.23, 4]} />
+      </Part>
+      <Part internal part={has('midbrain')} color="#d2b59a" position={[0.3, -0.42, 0]} rotation={[0, 0, -0.25]} scale={[0.16, 0.2, 0.15]} clip anchor={[1.4, 0.2, 1]}>
+        <sphereGeometry args={[1, 32, 24]} />
+      </Part>
+      <Part internal part={has('pons')} color="#d9b28a" position={[0.42, -0.72, 0.01]} scale={[0.24, 0.21, 0.22]} clip anchor={[1.3, 0, 1]} calloutDir={[70, 10]}>
+        <sphereGeometry args={[1, 32, 24]} />
+      </Part>
+      <Part part={has('medulla')} color="#e3cba7" position={[0.52, -1.08, 0]} rotation={[0, 0, -0.14]} anchor={[0.12, -0.05, 0.1]} calloutDir={[70, 30]}>
+        <cylinderGeometry args={[0.15, 0.11, 0.5, 28]} />
+      </Part>
+      {/* spinal continuation with root fibres (passive, as in the reference) */}
+      <TaperTube points={CORD} r0={0.11} r1={0.085} color="#eadbbd" />
+      {ROOTS.map((r, i) => (
+        <TaperTube key={i} points={r} r0={0.022} r1={0.012} color="#d8b04f" />
       ))}
-      <Part part={has('medulla') ? 'medulla' : undefined} color="#a9b98c" position={[0.55, -1.32, 0]} rotation={[0, 0, -0.2]}>
-        <cylinderGeometry args={[0.11, 0.085, 0.4, 24]} />
-      </Part>
       {[1, -1].map((s) => (
-        <Part key={s} geometry={cerebellum} part={has('cerebellum') ? 'cerebellum' : undefined} color="#8fa3c9" position={[0.98, -0.6, s * 0.25]} scale={[0.85, 0.6, 0.72]} roughness={0.72} anchor={s === 1 ? [0.2, -0.7, 0.4] : undefined} />
+        <Part key={s} geometry={cerebellum} part={has('cerebellum')} color="#c98a92" position={[0.98, -0.62, s * 0.24]} scale={[0.86, 0.6, 0.72]} roughness={0.7} clip={s === 1} anchor={s === -1 ? [0.35, -0.2, -0.3] : undefined} calloutDir={[70, 20]} />
       ))}
     </group>
   );

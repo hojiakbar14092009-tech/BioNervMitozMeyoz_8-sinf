@@ -1,0 +1,117 @@
+/* 3D viewer shell: callouts, zoom pad, presets, fullscreen. Dark studio stage in both themes, like the reference sheets. */
+
+.viewer-stage,
+[data-theme='dark'] .viewer-stage {
+  background: radial-gradient(120% 95% at 50% 30%, #2b3040 0%, #191c26 62%, #11131a 100%);
+  border-color: #2c3140;
+}
+
+/* callouts: point → leader line → named box (the box border uses the structure's legend colour) */
+.callout {
+  position: relative;
+  width: 0;
+  height: 0;
+  --c: #d9c48a;
+}
+.callout-dot {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 2px var(--c);
+}
+.callout-line {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1.5px;
+  background: rgb(255 255 255 / 0.75);
+  transform-origin: 0 50%;
+}
+.callout-box {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  white-space: nowrap;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--c);
+  background: rgb(17 19 27 / 0.86);
+  color: #f3f1ec;
+  font: 650 12.5px/1.3 var(--font);
+  cursor: pointer;
+}
+.callout.on .callout-box {
+  background: var(--c);
+  color: #15171e;
+}
+@media (max-width: 767px) {
+  .callout-box {
+    font-size: 11.5px;
+    padding: 3px 8px;
+  }
+}
+
+.zoom-pad {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  gap: 6px;
+  z-index: 3;
+}
+.zoom-pad .icon-btn {
+  background: rgb(17 19 27 / 0.7);
+  border: 1px solid #353b4c;
+  color: #f3f1ec;
+}
+.zoom-pad .icon-btn:hover {
+  background: rgb(40 44 58 / 0.9);
+}
+.viewer-badge,
+[data-theme='dark'] .viewer-badge,
+.compare-tag {
+  background: rgb(17 19 27 / 0.8);
+  border-color: #353b4c;
+  color: #f3f1ec;
+}
+.viewer-loading {
+  color: #b9bccb;
+}
+.preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+}
+.chip-btn.preset {
+  min-height: 40px;
+  padding: 6px 12px;
+}
+@media (pointer: coarse) {
+  .chip-btn.preset {
+    min-height: 44px;
+  }
+}
+
+.viewer.is-full {
+  background: #11131a;
+  padding: 16px;
+  overflow: auto;
+}
+.viewer.is-full .viewer-stage {
+  aspect-ratio: auto;
+  height: 78vh;
+  max-height: none;
+}
+.viewer.is-full .viewer-head h2,
+.viewer.is-full .viewer-what,
+.viewer.is-full .viewer-what strong {
+  color: #f3f1ec;
+}
