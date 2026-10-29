@@ -241,7 +241,7 @@ export default function ReflexArc({ scene, pulse, reduced, report }: SceneProps)
       <Part part="inter" geometry={geo.inter} emissiveBoost={0.15} anchor={[0, 0.55, 0.36]} calloutDir={[60, -60]} />
       <Part part="inter" geometry={interSoma} position={INTER[2]} scale={[1, 1.1, 0.8]} />
       <Part part="inter" geometry={geo.dendrites} />
-      <Part part="motor" geometry={geo.motor} emissiveBoost={0.12} anchor={[0.9, -0.28, 0.25]} calloutDir={[50, 40]} roughness={0.45} />
+      <Part part="motor" geometry={geo.motor} emissiveBoost={0.12} anchor={[0.9, -0.28, 0.25]} calloutDir={[70, -70]} roughness={0.45} />
       <Part part="motor" geometry={motorSoma} position={MOTOR[0]} scale={[1.1, 0.95, 0.8]} />
       <Part part="motor" geometry={geo.motorDendrites} />
       <Part part="motor" geometry={geo.terminals} />

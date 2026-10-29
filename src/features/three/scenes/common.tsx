@@ -83,11 +83,13 @@ export function Callout({ part, dir, on, label, color, select }: { part: string;
   const len = Math.hypot(dx, dy);
   const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
   const box = useRef<HTMLButtonElement>(null);
+  const line = useRef<HTMLSpanElement>(null);
   // keep the box inside the viewer as the model rotates; the leader line still marks the structure
   useEffect(() => {
     let raf = 0;
     let nx = 0;
     let ny = 0;
+    let flipped = false;
     const tick = () => {
       const el = box.current;
       const stage = el?.closest('.viewer-stage')?.getBoundingClientRect();
@@ -96,29 +98,41 @@ export function Callout({ part, dir, on, label, color, select }: { part: string;
         const pad = 6;
         const left = r.left - nx;
         const top = r.top - ny;
-        // the right edge keeps clear of the zoom pad
-        const tx = Math.max(0, stage.left + pad - left) - Math.max(0, left + r.width - (stage.right - 58));
+        // the right edge keeps clear of the zoom pad; a box that would cover its own point flips to the other side
+        const minX = stage.left + pad;
+        const maxX = stage.right - 58;
+        const flip = dx >= 0 ? -(r.width + 2 * dx) : r.width - 2 * dx;
+        let tx = Math.max(0, minX - left) - Math.max(0, left + r.width - maxX);
+        if (tx !== 0 && Math.abs(tx) > Math.abs(dx) && left + flip >= minX && left + flip + r.width <= maxX) tx = flip;
         const ty = Math.max(0, stage.top + pad - top) - Math.max(0, top + r.height - (stage.bottom - pad));
         if (tx !== nx || ty !== ny) {
           nx = tx;
           ny = ty;
           el.style.setProperty('--nx', `${nx}px`);
           el.style.setProperty('--ny', `${ny}px`);
+          const f = tx !== 0 && tx === flip;
+          if (f !== flipped && line.current) {
+            flipped = f;
+            line.current.style.transform = `rotate(${(Math.atan2(dy, f ? -dx : dx) * 180) / Math.PI}deg)`;
+          }
         }
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, []);
+  }, [dx, dy]);
   return (
     <div className={`callout ${on ? 'on' : ''}`} style={{ '--c': color } as React.CSSProperties}>
       <span className="callout-dot" />
-      <span className="callout-line" style={{ width: len, transform: `rotate(${ang}deg)` }} />
+      <span ref={line} className="callout-line" style={{ width: len, transform: `rotate(${ang}deg)` }} />
       <button
         ref={box}
         type="button"
         className="callout-box"
+        // pointer shortcut only: it sits inside the canvas (role="img"); keyboard and screen readers use the legend chips
+        tabIndex={-1}
+        aria-hidden="true"
         style={{ transform: `translate(${dx}px, ${dy}px) translate(${dx < 0 ? '-100%' : '0'}, -50%) translate(var(--nx, 0px), var(--ny, 0px))` }}
         onClick={() => select(on ? null : part)}
       >
