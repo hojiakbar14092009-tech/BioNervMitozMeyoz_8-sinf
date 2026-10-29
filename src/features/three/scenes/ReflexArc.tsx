@@ -1,83 +1,104 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
-import { PALETTE, Tube, curve, emph, M } from './common';
+import { PALETTE, Part, TaperTube, curve, useSelection } from './common';
+import { butterfly, cordOutline, muscleProfile } from './shapes';
 
 type P = [number, number, number];
-const SENSORY: P[] = [[-1.9, -1.0, 0], [-1.5, -0.4, 0.1], [-0.9, 0.2, 0.05], [-0.35, 0.45, 0]];
-const INTER: P[] = [[-0.35, 0.45, 0], [0, 0.3, 0], [0.3, 0.05, 0]];
-const MOTOR: P[] = [[0.3, 0.05, 0], [0.9, -0.2, 0.05], [1.4, -0.65, 0.1], [1.75, -0.95, 0]];
+const CORD: P = [0, 0.45, -0.1];
+const SENSORY: P[] = [[-2.0, -0.95, 0.05], [-1.6, -0.45, 0.1], [-1.05, 0.25, 0.05], [-0.62, 0.62, 0], [-0.22, 0.68, 0]];
+const INTER: P[] = [[-0.22, 0.68, 0], [0, 0.48, 0.02], [0.2, 0.25, 0]];
+const MOTOR: P[] = [[0.2, 0.25, 0], [0.75, 0.0, 0.05], [1.3, -0.5, 0.1], [1.62, -0.88, 0]];
 const FULL = curve([...SENSORY, ...INTER.slice(1), ...MOTOR.slice(1)]);
-// Progress windows for each part of the arc.
+// Progress windows along the arc → hotspot id.
 const WINDOWS: [string, number, number][] = [
   ['receptor', 0, 0.08],
-  ['sensory', 0.08, 0.42],
-  ['inter', 0.42, 0.58],
-  ['motor', 0.58, 0.92],
-  ['effector', 0.92, 1.01],
+  ['sensory', 0.08, 0.44],
+  ['inter', 0.44, 0.58],
+  ['motor', 0.58, 0.9],
+  ['effector', 0.9, 1.01],
 ];
 
-export default function ReflexArc({ selected, pulse, reduced }: SceneProps) {
+export default function ReflexArc({ scene, pulse, reduced, report }: SceneProps) {
+  const { select } = useSelection();
   const spark = useRef<THREE.Mesh>(null);
-  const muscle = useRef<THREE.Mesh>(null);
+  const muscle = useRef<THREE.Group>(null);
   const prog = useRef(-1);
-  const [active, setActive] = useState<string | null>(null);
+  const last = useRef<string | null>(null);
+  const grey = useMemo(butterfly, []);
+  const outline = useMemo(() => cordOutline(), []);
+  const lathe = useMemo(muscleProfile, []);
+  const label = (id: string) => scene.hotspots.find((h) => h.id === id)?.label ?? id;
 
   useEffect(() => {
     if (pulse > 0) prog.current = 0;
   }, [pulse]);
+  useEffect(() => () => report?.(null), [report]);
 
   useFrame((_, dt) => {
     if (prog.current < 0) return;
-    prog.current += dt * (reduced ? 0.5 : 0.35);
+    prog.current += dt * (reduced ? 0.45 : 0.32);
     const p = Math.min(prog.current, 1);
     const part = WINDOWS.find(([, a, b]) => p >= a && p < b)?.[0] ?? null;
-    if (part !== active) setActive(part);
+    if (part !== last.current) {
+      last.current = part;
+      select(part); // the travelling impulse highlights each arc component in turn
+      report?.(part ? `${label(part)} (${WINDOWS.findIndex((w) => w[0] === part) + 1}/5)` : null);
+    }
     if (spark.current) {
       spark.current.visible = !reduced && p < 1;
       spark.current.position.copy(FULL.getPointAt(p));
     }
     if (muscle.current) {
-      const k = p > 0.92 ? 1 - Math.sin(((p - 0.92) / 0.08) * Math.PI) * 0.18 : 1;
-      muscle.current.scale.set(k * 1.35, (1 / k) * 0.55, 0.55);
+      const k = p > 0.9 ? 1 - Math.sin(((p - 0.9) / 0.1) * Math.PI) * 0.16 : 1;
+      muscle.current.scale.set(1 / k, k, 1 / k);
     }
-    if (prog.current > 1.4) {
+    if (prog.current > 1.5) {
       prog.current = -1;
-      setActive(null);
+      last.current = null;
+      select(null);
+      report?.(null);
     }
   });
 
-  const sel = active ?? selected;
   return (
-    <group scale={0.9}>
-      {/* spinal cord segment: white matter with grey core */}
-      <mesh position={[0, 0.25, -0.15]}>
-        <cylinderGeometry args={[0.62, 0.62, 0.5, 40]} />
-        <M {...emph(sel, 'inter', PALETTE.white)} transparent opacity={0.55} />
-      </mesh>
-      <mesh position={[0, 0.25, -0.15]}>
-        <cylinderGeometry args={[0.3, 0.3, 0.52, 6]} />
-        <M {...emph(sel, 'inter', PALETTE.grey)} />
-      </mesh>
-      <mesh position={[-1.9, -1.0, 0]}>
-        <sphereGeometry args={[0.14, 20, 16]} />
-        <M {...emph(sel, 'receptor', PALETTE.amber)} />
-      </mesh>
-      <mesh position={[-0.95, 0.22, 0.05]}>
-        <sphereGeometry args={[0.1, 18, 14]} />
-        <M {...emph(sel, 'sensory', PALETTE.blue)} />
-      </mesh>
-      <Tube points={SENSORY} radius={0.04} material={emph(sel, 'sensory', PALETTE.blue)} />
-      <Tube points={INTER} radius={0.035} material={emph(sel, 'inter', PALETTE.teal)} />
-      <Tube points={MOTOR} radius={0.04} material={emph(sel, 'motor', PALETTE.rose)} />
-      <mesh ref={muscle} position={[1.95, -1.15, 0]} scale={[1.35, 0.55, 0.55]}>
-        <sphereGeometry args={[0.32, 32, 20]} />
-        <M {...emph(sel, 'effector', PALETTE.tissueDeep)} />
-      </mesh>
-      <mesh ref={spark} visible={false}>
-        <sphereGeometry args={[0.07, 16, 12]} />
-        <meshBasicMaterial color={PALETTE.glow} />
+    <group position={[0, -0.05, 0]}>
+      {/* skin slab with the receptor */}
+      <Part position={[-2.0, -1.12, 0]} pickable={false} color={PALETTE.skin} opacity={0.55} roughness={0.8}>
+        <boxGeometry args={[1.1, 0.16, 0.8]} />
+      </Part>
+      <Part part="receptor" position={[-2.0, -0.98, 0.05]} anchor={[0, -0.28, 0]}>
+        <icosahedronGeometry args={[0.1, 3]} />
+      </Part>
+      {/* spinal cord segment: white matter outline + butterfly grey matter */}
+      <group position={CORD}>
+        <Part part="inter" pickable={false} opacity={0.42} color="#ece4d6" position={[0, 0, -0.22]} scale={0.62}>
+          <extrudeGeometry args={[outline, { depth: 0.44 / 0.62, bevelEnabled: true, bevelSize: 0.04, bevelThickness: 0.04, bevelSegments: 3, curveSegments: 32 }]} />
+        </Part>
+        <Part part="inter" position={[0, 0, -0.24]} scale={0.66} color="#9b8ea3" anchor={[0, 0.85, 0.4]}>
+          <extrudeGeometry args={[grey, { depth: 0.48 / 0.66, bevelEnabled: false, curveSegments: 18 }]} />
+        </Part>
+      </group>
+      {/* sensory neuron: cell body in the spinal ganglion beside the cord */}
+      <TaperTube part="sensory" points={SENSORY} r0={0.032} r1={0.028} anchor={[-1.1, 0.48, 0.05]} />
+      <Part part="sensory" position={[-1.05, 0.25, 0.05]} scale={[1.2, 1, 1]}>
+        <sphereGeometry args={[0.1, 24, 18]} />
+      </Part>
+      <TaperTube part="inter" points={INTER} r0={0.03} r1={0.026} />
+      <TaperTube part="motor" points={MOTOR} r0={0.034} r1={0.026} anchor={[0.95, 0.05, 0.05]} />
+      <Part part="motor" position={[0.2, 0.25, 0]}>
+        <icosahedronGeometry args={[0.07, 2]} />
+      </Part>
+      {/* effector: fusiform muscle */}
+      <group ref={muscle} position={[1.85, -1.08, 0]} rotation={[0, 0, Math.PI / 2.6]}>
+        <Part part="effector" anchor={[0.45, 0.2, 0]} roughness={0.7}>
+          <latheGeometry args={[lathe, 36]} />
+        </Part>
+      </group>
+      <mesh ref={spark} visible={false} raycast={() => null}>
+        <sphereGeometry args={[0.055, 16, 12]} />
+        <meshBasicMaterial color={PALETTE.glow} toneMapped={false} />
       </mesh>
     </group>
   );

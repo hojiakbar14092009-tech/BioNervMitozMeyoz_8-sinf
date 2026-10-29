@@ -25,20 +25,27 @@ export type SceneKey =
   | 'translation'
   | 'division';
 
+/** A selectable biological structure in a 3D scene. Labels/texts must come from the lesson's pages. */
 export interface Hotspot {
   id: string;
   label: string;
   text: string;
+  page: number;
+  /** Legend swatch; scenes read the same colour so legend and model always match. */
+  color: string;
 }
 
 export interface SceneConfig {
   key: SceneKey;
   title: string;
+  /** "Bu nima?" — one sentence naming what the model represents. */
+  what: string;
   caption: string;
   /** Which brain regions / structures to emphasise, scene-specific ids. */
   focus?: string[];
-  /** Stage set for division scene. */
-  mode?: 'mitosis' | 'meiosis' | 'binary' | 'replication' | 'transcription';
+  mode?: 'mitosis' | 'meiosis' | 'compare';
+  /** Explicit process stages (timeline); division/translation stages are derived from their data. */
+  stages?: { name: string; text: string }[];
   hotspots: Hotspot[];
 }
 
@@ -57,7 +64,7 @@ export type InteractiveKey =
   | 'cellCycle'
   | 'meiosisJourney'
   | 'microscope'
-  | 'compareDivision';
+  | 'eventMatch';
 
 export type Section =
   | { kind: 'text'; id: string; heading: string; paras: string[]; bullets?: string[]; page: number }

@@ -19,7 +19,7 @@ const MAP: Record<InteractiveKey, ComponentType> = {
   cellCycle: g10('CellCycle'),
   meiosisJourney: g10('MeiosisJourney'),
   microscope: g10('Microscope'),
-  compareDivision: g10('CompareDivision'),
+  eventMatch: g10('EventMatch'),
 };
 
 export default function Interactive({ k }: { k: InteractiveKey }) {

@@ -1,19 +1,20 @@
-import { Component, Suspense, lazy, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, PerformanceMonitor } from '@react-three/drei';
+import { Component, Suspense, lazy, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { ContactShadows, Environment, Lightformer, OrbitControls, PerformanceMonitor } from '@react-three/drei';
 import type { OrbitControls as OrbitImpl } from 'three-stdlib';
 import type { SceneConfig, SceneKey } from '../../types';
-import { framesFor } from '../division/stages';
 import { useReducedMotion } from '../../lib/hooks';
 import SceneFallback from './Fallback';
-import { TRANSLATION_CODONS } from './sequences';
+import { SelectionContext, type Selection } from './scenes/common';
+import { ModelLegend, StructureInfo, stagesOf } from './structures';
 
 export interface SceneProps {
   scene: SceneConfig;
-  selected: string | null;
   stage: number;
   pulse: number;
   reduced: boolean;
+  /** Process scenes report the currently active part (e.g. impulse position). */
+  report?: (label: string | null) => void;
 }
 
 const scenes: Record<SceneKey, React.LazyExoticComponent<ComponentType<SceneProps>>> = {
@@ -27,35 +28,18 @@ const scenes: Record<SceneKey, React.LazyExoticComponent<ComponentType<SceneProp
   division: lazy(() => import('./scenes/Division')),
 };
 
-export function stagesOf(scene: SceneConfig): { names: string[]; texts: string[] } | null {
-  if (scene.key === 'division' && (scene.mode === 'mitosis' || scene.mode === 'meiosis')) {
-    const f = framesFor(scene.mode);
-    return { names: f.map((x) => `${x.name} · ${x.formula}`), texts: f.map((x) => x.text) };
-  }
-  if (scene.key === 'dna')
-    return {
-      names: ['Qo‘sh spiral', 'Reduplikatsiya', 'Transkripsiya'],
-      texts: [
-        'DNK ikki komplementar zanjirdan iborat: A–T va G–C juftlashadi.',
-        'Zanjirlar ajraladi; har biri matritsa bo‘lib, DNK-polimeraza erkin nukleotidlardan yangi komplementar zanjir quradi.',
-        'DNKning bitta zanjiridan RNK-polimeraza yordamida iRNK sintezlanadi: A–U, G–C.',
-      ],
-    };
-  if (scene.key === 'translation')
-    return {
-      names: TRANSLATION_CODONS.map((c, i) => `${i + 1}. ${c.codon}`),
-      texts: TRANSLATION_CODONS.map((c, i) =>
-        c.amino === 'stop'
-          ? `${c.codon} — stop kodon: oqsil sintezi to‘xtaydi, ribosoma ikki subbirlikka ajraladi.`
-          : i === 0
-            ? `${c.codon} — start kodon. ${c.anticodon} antikodonli tRNK ${c.amino}ni olib keladi.`
-            : `${c.codon} kodoniga ${c.anticodon} antikodonli tRNK ${c.amino}ni olib keladi; peptid bog‘i hosil bo‘ladi va iRNK bitta tripletga siljiydi.`,
-      ),
-    };
-  if (scene.key === 'metabolism')
-    return { names: scene.hotspots.map((h) => h.label), texts: scene.hotspots.map((h) => h.text) };
-  return null;
-}
+// Opening angle per model: the informative side faces the learner.
+const CAMERA: Record<SceneKey, [number, number, number]> = {
+  neuron: [0.2, 0.5, 4.6],
+  reflexArc: [0.3, 0.7, 4.8],
+  spinalCord: [0.9, 0.9, 3.6],
+  brain: [-1.6, 0.55, 3.7],
+  metabolism: [0, 0.4, 4.9],
+  dna: [0.6, 0.3, 4.4],
+  translation: [0, 0.5, 4.1],
+  division: [0, 0, 4.1],
+};
+const FLOOR: Record<SceneKey, number> = { neuron: -1.25, reflexArc: -1.45, spinalCord: -1.0, brain: -1.45, metabolism: -1.85, dna: -1.8, translation: -1.2, division: -1.35 };
 
 function hasWebGL() {
   try {
@@ -79,6 +63,33 @@ class Boundary extends Component<{ fallback: ReactNode; children: ReactNode }, {
   }
 }
 
+/** Signals once real frames have rendered (after shader compilation), so the stage never looks empty. */
+function FirstFrames({ onReady }: { onReady: () => void }) {
+  const n = useRef(0);
+  useFrame(() => {
+    if (++n.current === 3) onReady();
+  });
+  return null;
+}
+
+function Studio({ floor }: { floor: number }) {
+  return (
+    <>
+      <hemisphereLight args={['#fff6ee', '#5a5260', 0.5]} />
+      <directionalLight position={[3, 4, 5]} intensity={1.15} color="#fff3e6" />
+      <directionalLight position={[-4, 1, 2]} intensity={0.35} color="#dfe8ff" />
+      <directionalLight position={[0, 3, -5]} intensity={0.75} />
+      {/* Soft studio reflections generated locally once (no HDR download). */}
+      <Environment resolution={64} frames={1}>
+        <Lightformer intensity={1.4} position={[0, 4, 2]} scale={[8, 3, 1]} color="#fff7ef" />
+        <Lightformer intensity={0.5} position={[-5, 0, 0]} rotation-y={Math.PI / 2} scale={[6, 6, 1]} color="#e6ecff" />
+        <Lightformer intensity={0.4} position={[5, -1, -2]} rotation-y={-Math.PI / 2} scale={[6, 4, 1]} color="#ffe9dc" />
+      </Environment>
+      <ContactShadows position={[0, floor, 0]} opacity={0.32} scale={9} blur={2.6} far={3.5} resolution={256} color="#2a2430" />
+    </>
+  );
+}
+
 export default function Viewer({ scene }: { scene: SceneConfig }) {
   const reduced = useReducedMotion();
   const host = useRef<HTMLDivElement>(null);
@@ -88,11 +99,25 @@ export default function Viewer({ scene }: { scene: SceneConfig }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [stage, setStage] = useState(0);
   const [pulse, setPulse] = useState(0);
+  const [active, setActive] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   const [auto, setAuto] = useState(false);
-  const [dpr, setDpr] = useState(() => Math.min(window.devicePixelRatio || 1, window.innerWidth < 768 ? 1.5 : 2));
-  const stages = stagesOf(scene);
+  const narrow = window.innerWidth < 768;
+  const [dpr, setDpr] = useState(() => Math.min(window.devicePixelRatio || 1, narrow ? 1.5 : 2));
+  const stages = useMemo(() => stagesOf(scene), [scene]);
   const Scene = scenes[scene.key];
-  const sel = scene.hotspots.find((h) => h.id === selected);
+  const cam = CAMERA[scene.key].map((v) => v * (narrow ? 1.22 : 1)) as [number, number, number];
+
+  const selection = useMemo<Selection>(
+    () => ({
+      selected,
+      select: setSelected,
+      colors: Object.fromEntries(scene.hotspots.map((h) => [h.id, h.color])),
+      labels: Object.fromEntries(scene.hotspots.map((h) => [h.id, h.label])),
+      anchors: !narrow,
+    }),
+    [selected, scene.hotspots, narrow],
+  );
 
   // Mount the canvas only while near the viewport: one heavy WebGL context at a time, freed when scrolled away.
   useEffect(() => {
@@ -103,84 +128,114 @@ export default function Viewer({ scene }: { scene: SceneConfig }) {
     return () => io.disconnect();
   }, []);
 
-  const fallback = <SceneFallback scene={scene} stage={stage} />;
-  const changeStage = (i: number) => {
-    setStage(i);
-    if (scene.key === 'metabolism') setSelected(scene.hotspots[i]?.id ?? null);
+  useEffect(() => {
+    if (!near) setReady(false);
+  }, [near]);
+
+  const reset = () => {
+    controls.current?.reset();
+    setSelected(null);
+    setAuto(false);
   };
+  const st = stages?.[stage];
+  const fallback = <SceneFallback scene={scene} stage={stage} />;
 
   return (
-    <figure className="viewer">
+    <figure className="viewer" aria-labelledby={`vh-${scene.key}-${scene.title}`}>
+      <header className="viewer-head">
+        <p className="eyebrow">Interaktiv 3D model</p>
+        <h2 id={`vh-${scene.key}-${scene.title}`}>{scene.title}</h2>
+        <p className="viewer-what">
+          <strong>Bu nima?</strong> {scene.what}
+        </p>
+      </header>
+
       <div ref={host} className="viewer-stage">
         {!webgl ? (
           fallback
         ) : near ? (
           <Boundary fallback={fallback}>
             <Suspense fallback={<div className="viewer-loading" role="status">3D model yuklanmoqda…</div>}>
-              <Canvas
-                dpr={dpr}
-                camera={{ position: [0, 0, window.innerWidth < 768 ? 5.4 : 4.2], fov: 42 }}
-                gl={{ antialias: true, powerPreference: 'high-performance' }}
-                aria-label={scene.title}
-                role="img"
-              >
+              <Canvas dpr={dpr} camera={{ position: cam, fov: 40 }} gl={{ antialias: true, powerPreference: 'high-performance' }} aria-label={`${scene.title}: ${scene.what}`} role="img">
                 <PerformanceMonitor onDecline={() => setDpr((d) => Math.max(1, d - 0.25))} onIncline={() => setDpr((d) => Math.min(d + 0.25, window.devicePixelRatio || 1, 2))} />
-                <ambientLight intensity={0.55} />
-                <directionalLight position={[3, 4, 5]} intensity={1.15} />
-                <directionalLight position={[-4, -2, -3]} intensity={0.35} />
-                <Scene scene={scene} selected={selected} stage={stage} pulse={pulse} reduced={reduced} />
-                <OrbitControls ref={controls} enablePan={false} minDistance={2.2} maxDistance={8} autoRotate={auto && !reduced} autoRotateSpeed={0.6} enableDamping />
+                <FirstFrames onReady={() => setReady(true)} />
+                <Studio floor={FLOOR[scene.key]} />
+                <SelectionContext.Provider value={selection}>
+                  <Scene scene={scene} stage={stage} pulse={pulse} reduced={reduced} report={setActive} />
+                </SelectionContext.Provider>
+                <OrbitControls ref={controls} enablePan={false} minDistance={2.2} maxDistance={9} autoRotate={auto && !reduced} autoRotateSpeed={0.5} enableDamping />
               </Canvas>
             </Suspense>
           </Boundary>
         ) : (
           <div className="viewer-loading">3D sahna</div>
         )}
+        {webgl && near && !ready && (
+          <div className="viewer-loading veil" role="status">
+            3D model tayyorlanmoqda…
+          </div>
+        )}
+        {st && (
+          <div className="viewer-badge" aria-hidden="true">
+            <span>{stage + 1} / {stages!.length}</span>
+            {st.group && <strong>{st.group}</strong>}
+            <span>{scene.mode === 'compare' ? '' : st.name}</span>
+          </div>
+        )}
+        {scene.mode === 'compare' && (
+          <>
+            <span className="compare-tag left">MITOZ</span>
+            <span className="compare-tag right">MEYOZ</span>
+          </>
+        )}
+        {active && (
+          <div className="viewer-badge bottom" aria-live="polite">
+            Impuls: <strong>{active}</strong>
+          </div>
+        )}
       </div>
 
-      <div className="viewer-controls">
-        <button type="button" className="btn btn-sm" onClick={() => controls.current?.reset()}>⟲ Joyiga qaytarish</button>
+      <div className="viewer-controls" role="toolbar" aria-label="3D boshqaruv">
+        <button type="button" className="btn btn-sm" onClick={reset}>
+          <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M4 10a6 6 0 1 0 2-4.5M4 3v3h3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+          Boshlang‘ich holat
+        </button>
         {!reduced && (
           <button type="button" className="btn btn-sm" aria-pressed={auto} onClick={() => setAuto(!auto)}>
-            {auto ? '⏸ Aylanishni to‘xtatish' : '↻ Avto-aylanish'}
+            <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><ellipse cx="10" cy="10" rx="7" ry="3.5" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M15 6.5l2 0.3-0.6 1.9" fill="none" stroke="currentColor" strokeWidth="1.6" /></svg>
+            {auto ? 'Aylanishni to‘xtatish' : 'Avto-aylanish'}
           </button>
         )}
         {scene.key === 'reflexArc' && (
-          <button type="button" className="btn btn-sm btn-primary" onClick={() => setPulse((p) => p + 1)}>⚡ Impuls yuborish</button>
+          <button type="button" className="btn btn-sm btn-primary" onClick={() => setPulse((p) => p + 1)}>
+            ⚡ Impuls yuborish
+          </button>
         )}
-        <span className="muted small hint">Barmoq bilan aylantiring, ikki barmoq bilan yaqinlashtiring</span>
+        <span className="muted small hint">Bir barmoq — aylantirish · ikki barmoq — yaqinlashtirish · qismni bosing — tanlash</span>
       </div>
 
-      {stages && (
+      {stages && st && (
         <div className="stage-nav">
           <div className="stage-head">
-            <button type="button" className="icon-btn" aria-label="Oldingi bosqich" disabled={stage === 0} onClick={() => changeStage(stage - 1)}>←</button>
-            <strong aria-live="polite">{stages.names[stage]}</strong>
-            <button type="button" className="icon-btn" aria-label="Keyingi bosqich" disabled={stage === stages.names.length - 1} onClick={() => changeStage(stage + 1)}>→</button>
+            <button type="button" className="icon-btn" aria-label="Oldingi bosqich" disabled={stage === 0} onClick={() => setStage(stage - 1)}>←</button>
+            <div className="stage-title" aria-live="polite">
+              <span className="stage-count">{stage + 1}-bosqich / {stages.length}</span>
+              {st.group && scene.mode !== 'compare' && <span className="stage-group">{st.group}</span>}
+              <strong>{st.name}{st.formula ? ` · ${st.formula}` : ''}</strong>
+            </div>
+            <button type="button" className="icon-btn" aria-label="Keyingi bosqich" disabled={stage === stages.length - 1} onClick={() => setStage(stage + 1)}>→</button>
           </div>
-          <p className="stage-text">{stages.texts[stage]}</p>
+          <p className="stage-text">{st.text}</p>
           <div className="stage-dots" role="tablist" aria-label="Bosqichlar">
-            {stages.names.map((n, i) => (
-              <button key={n} role="tab" aria-selected={i === stage} aria-label={n} className={`sdot ${i === stage ? 'on' : ''}`} onClick={() => changeStage(i)} />
+            {stages.map((s, i) => (
+              <button key={i} role="tab" aria-selected={i === stage} aria-label={`${i + 1}: ${s.group ? `${s.group} — ` : ''}${s.name}`} className={`sdot ${i === stage ? 'on' : ''}`} onClick={() => setStage(i)} />
             ))}
           </div>
         </div>
       )}
 
-      {scene.hotspots.length > 0 && scene.key !== 'metabolism' && (
-        <div className="hotspots" role="group" aria-label="Tuzilmalar">
-          {scene.hotspots.map((h) => (
-            <button key={h.id} type="button" className={`chip-btn ${selected === h.id ? 'on' : ''}`} aria-pressed={selected === h.id} onClick={() => setSelected(selected === h.id ? null : h.id)}>
-              {h.label}
-            </button>
-          ))}
-        </div>
-      )}
-      {sel && scene.key !== 'metabolism' && (
-        <p className="hotspot-text" aria-live="polite">
-          <strong>{sel.label}:</strong> {sel.text}
-        </p>
-      )}
+      <ModelLegend hotspots={scene.hotspots} selected={selected} onSelect={setSelected} />
+      <StructureInfo hotspots={scene.hotspots} selected={selected} onClose={() => setSelected(null)} />
       <figcaption className="muted small">{scene.caption}</figcaption>
     </figure>
   );

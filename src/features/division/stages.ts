@@ -264,3 +264,19 @@ export const meiosisFrames: Frame[] = [
 ];
 
 export const framesFor = (mode: Mode) => (mode === 'mitosis' ? mitosisFrames : meiosisFrames);
+
+/** Explicit stage group, shown as a header so meiosis I and II are never told apart by colour alone. */
+export const groupOf = (mode: Mode, i: number) => (mode === 'mitosis' ? 'Mitoz' : i === 0 ? 'Interfaza' : i <= 4 ? 'Meyoz I' : 'Meyoz II');
+
+// 2.15 synchronized comparison; criteria texts from Biologiya 10, pp.73–77.
+export const compareSteps: { mi: number; me: number; note: string }[] = [
+  { mi: 0, me: 0, note: 'Ikkalasi ham interfazadan boshlanadi: DNK reduplikatsiyalanadi (2n2c → 2n4c).' },
+  { mi: 1, me: 1, note: 'Meyozda profaza I eng uzoq: gomologik xromosomalar konyugatsiyasi va krossingover. Mitoz profazasida bunday hodisa yo‘q.' },
+  { mi: 2, me: 2, note: 'Mitozda ekvatorda alohida xromosomalar; metafaza I da tetradalar — gomologik juftlar ekvatorning ikki tomonida.' },
+  { mi: 3, me: 3, note: 'Mitozda sentromeralar bo‘linib xromatidalar ajraladi (4n4c). Anafaza I da gomologik xromosomalar xromatidalarga ajralmasdan tarqaladi (2n4c).' },
+  { mi: 4, me: 4, note: 'Mitoz telofazasi: 2n2c. Telofaza I: 1n2c — xromosomalar soni ikki hissa kamaydi.' },
+  { mi: 5, me: 5, note: 'Mitoz tugadi: ikki bir xil hujayra. Meyozda interkinezdan (DNK replikatsiyasisiz) so‘ng ikkinchi bo‘linish boshlanadi.' },
+  { mi: 5, me: 6, note: 'Metafaza II: har bir hujayra ekvatorida ikki xromatidali xromosomalar (1n2c).' },
+  { mi: 5, me: 7, note: 'Anafaza II: xromatidalar qutblarga tortiladi va mustaqil xromosomaga aylanadi.' },
+  { mi: 5, me: 8, note: 'Natija: mitozda 2 ta bir xil diploid hujayra; meyozda 4 ta bir-biridan farq qiluvchi gaploid hujayra (1n1c).' },
+];

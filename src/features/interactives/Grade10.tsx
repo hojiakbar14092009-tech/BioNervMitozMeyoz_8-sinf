@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { play } from '../../lib/audio';
 import DivisionSVG from '../division/DivisionSVG';
-import { meiosisFrames, mitosisFrames } from '../division/stages';
+import { mitosisFrames } from '../division/stages';
 import { GENETIC_CODE, anticodon, codons, complementDNA, transcribe } from '../three/sequences';
 import { PROBLEMS, energy } from './energy';
 import { Matcher, NumberCheck, Panel } from './shared';
@@ -328,43 +328,25 @@ export function Microscope() {
   );
 }
 
-// 2.15 — synchronized comparison (texts from pp.73–77)
-const STEPS: { mi: number; me: number; note: string }[] = [
-  { mi: 0, me: 0, note: 'Ikkalasi ham interfazadan boshlanadi: DNK reduplikatsiyalanadi (2n2c → 2n4c).' },
-  { mi: 1, me: 1, note: 'Meyozda profaza I eng uzoq: gomologik xromosomalar konyugatsiyasi va krossingover. Mitoz profazasida bunday hodisa yo‘q.' },
-  { mi: 2, me: 2, note: 'Mitozda ekvatorda alohida xromosomalar; metafaza I da esa tetradalar — gomologik juftlar ekvatorning ikki tomonida.' },
-  { mi: 3, me: 3, note: 'Mitozda sentromeralar bo‘linib xromatidalar ajraladi (4n4c). Anafaza I da gomologik xromosomalar xromatidalarga ajralmasdan tarqaladi (2n4c).' },
-  { mi: 4, me: 4, note: 'Mitoz telofazasi: 2n2c. Telofaza I: 1n2c — xromosomalar soni ikki hissa kamaydi.' },
-  { mi: 5, me: 5, note: 'Mitoz tugadi: ikki bir xil hujayra. Meyozda interkinezdan (DNK replikatsiyasisiz) so‘ng ikkinchi bo‘linish boshlanadi.' },
-  { mi: 5, me: 6, note: 'Metafaza II: har bir hujayra ekvatorida ikki xromatidali xromosomalar (1n2c).' },
-  { mi: 5, me: 7, note: 'Anafaza II: xromatidalar qutblarga tortiladi va mustaqil xromosomaga aylanadi.' },
-  { mi: 5, me: 8, note: 'Natija: mitozda 2 ta bir xil diploid hujayra; meyozda 4 ta bir-biridan farq qiluvchi gaploid hujayra (1n1c).' },
-];
-
-export function CompareDivision() {
-  const [i, setI] = useState(0);
-  const s = STEPS[i];
-  const mi = mitosisFrames[s.mi];
-  const me = meiosisFrames[s.me];
-  const pct = Math.round((i / (STEPS.length - 1)) * 100);
+// 2.15 — p.81 task 3: match events to cell-cycle stages (answers from pp.73–76).
+export function EventMatch() {
   return (
-    <Panel title="Mitoz va meyoz — yonma-yon" note="Sxema: 2n = 4 (ko‘k — otadan, pushti — onadan). Taqqoslash mezonlari darslikdan.">
-      <div className="compare">
-        <figure>
-          <figcaption><strong>Mitoz</strong> · {mi.name} <span className="formula">{mi.formula}</span></figcaption>
-          <DivisionSVG frame={mi} label={`Mitoz: ${mi.name}`} />
-        </figure>
-        <figure>
-          <figcaption><strong>Meyoz</strong> · {me.name} <span className="formula">{me.formula}</span></figcaption>
-          <DivisionSVG frame={me} label={`Meyoz: ${me.name}`} />
-        </figure>
-      </div>
-      <p className="compare-note" aria-live="polite">{s.note}</p>
-      <div className="stage-head">
-        <button type="button" className="icon-btn" aria-label="Oldingi qadam" disabled={i === 0} onClick={() => setI(i - 1)}>←</button>
-        <span className="progress" aria-label={`${i + 1}-qadam, jami ${STEPS.length}`}><span style={{ width: `${pct}%` }} /></span>
-        <button type="button" className="icon-btn" aria-label="Keyingi qadam" disabled={i === STEPS.length - 1} onClick={() => setI(i + 1)}>→</button>
-      </div>
+    <Panel title="Hodisalarni bosqichlar bilan moslang" note="Darslikdagi 3-topshiriq (81-bet). Javoblar 2.12–2.13-mavzulardagi faza tavsiflaridan (73–76-betlar).">
+      <Matcher
+        seed="g10-215"
+        leftTitle="Hodisa"
+        rightTitle="Bosqich"
+        pairs={[
+          ['DNK replikatsiyasi', 'Sintez davri'],
+          ['Tubulin oqsilining sintezlanishi', 'Sintezdan keyingi davr'],
+          ['Xromosomalarning spirallashuvi', 'Profaza'],
+          ['Sentriolaning qutblarga tarqalishi', 'Profaza'],
+          ['Xromosomalarning ekvatorda joylashuvi', 'Metafaza'],
+          ['4n4c', 'Anafaza'],
+          ['Yadro membranasi va yadrochaning paydo bo‘lishi', 'Telofaza'],
+          ['Gomologik xromosomalar konyugatsiyasi', 'Profaza I'],
+        ]}
+      />
     </Panel>
   );
 }

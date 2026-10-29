@@ -1,6 +1,6 @@
 import type { SceneConfig } from '../../types';
 import DivisionSVG from '../division/DivisionSVG';
-import { framesFor } from '../division/stages';
+import { compareSteps, framesFor, meiosisFrames, mitosisFrames } from '../division/stages';
 import { TRANSLATION_CODONS } from './sequences';
 
 /** Lateral brain outline with lobes; front faces left. Shared by the 3D fallback and the brain-map interactive. */
@@ -39,6 +39,16 @@ export default function SceneFallback({ scene, stage }: { scene: SceneConfig; st
   let art: React.ReactNode = null;
   switch (scene.key) {
     case 'division': {
+      if (scene.mode === 'compare') {
+        const c = compareSteps[Math.min(stage, compareSteps.length - 1)];
+        art = (
+          <div className="compare">
+            <DivisionSVG frame={mitosisFrames[c.mi]} label={`Mitoz: ${mitosisFrames[c.mi].name}`} />
+            <DivisionSVG frame={meiosisFrames[c.me]} label={`Meyoz: ${meiosisFrames[c.me].name}`} />
+          </div>
+        );
+        break;
+      }
       const f = framesFor(scene.mode === 'meiosis' ? 'meiosis' : 'mitosis');
       art = <DivisionSVG frame={f[Math.min(stage, f.length - 1)]} />;
       break;
@@ -81,6 +91,7 @@ export default function SceneFallback({ scene, stage }: { scene: SceneConfig; st
   }
   return (
     <div className="scene-fallback">
+      <p className="small"><strong>{scene.title}.</strong> {scene.what}</p>
       {art}
       <Labels items={scene.hotspots.map((h) => `${h.label} — ${h.text}`)} />
       <p className="muted small">3D ko‘rinish bu qurilmada ochilmadi — sxematik tasvir ko‘rsatilmoqda.</p>

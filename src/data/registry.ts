@@ -41,6 +41,16 @@ export function validateContent(): string[] {
       seenRoutes.add(route);
       if (!t.sections.length || !t.important.length || !t.summary) errors.push(`${t.key}: missing content`);
       if (!/^#[0-9a-f]{6}$/i.test(t.theme.accent) || !/^#[0-9a-f]{6}$/i.test(t.theme.accentDark)) errors.push(`${t.key}: invalid theme`);
+      for (const h of t.scene?.hotspots ?? []) {
+        if (h.page < t.pages[0] - 4 || h.page > t.pages[1]) errors.push();
+        if (!/^#[0-9a-f]{6}$/i.test(h.color)) errors.push();
+      }
+      if (t.scene && !t.scene.what) errors.push();
+      for (const h of t.scene?.hotspots ?? []) {
+        if (h.page < t.pages[0] - 4 || h.page > t.pages[1]) errors.push(`${t.key}/${h.id}: label page ${h.page} outside lesson`);
+        if (!/^#[0-9a-f]{6}$/i.test(h.color)) errors.push(`${t.key}/${h.id}: invalid legend colour`);
+      }
+      if (t.scene && !t.scene.what) errors.push(`${t.key}: 3D scene has no description`);
       for (const s of t.sections) {
         if (s.page < t.pages[0] - 4 || s.page > t.pages[1]) errors.push(`${t.key}/${s.id}: page ${s.page} outside lesson`);
       }
