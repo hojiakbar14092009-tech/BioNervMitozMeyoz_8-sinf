@@ -37,13 +37,19 @@ const SECTION: Partial<Record<SceneKey, THREE.Plane>> = {
   metabolism: new THREE.Plane(new THREE.Vector3(0, 0, -1), 0), // opens the front half of each mitochondrion
 };
 
+let webglSupport: boolean | undefined;
+/** Probed once per page and the probe context released at once: browsers cap live WebGL contexts (low on phones). */
 function hasWebGL() {
+  if (webglSupport !== undefined) return webglSupport;
   try {
     const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+    const gl = c.getContext('webgl2') || c.getContext('webgl');
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    webglSupport = !!gl;
   } catch {
-    return false;
+    webglSupport = false;
   }
+  return webglSupport;
 }
 
 class Boundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
