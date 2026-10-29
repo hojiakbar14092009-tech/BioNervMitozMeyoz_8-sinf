@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import type { SceneProps } from '../Viewer';
-import { compareSteps, framesFor, meiosisFrames, mitosisFrames, type Chromatid, type Frame } from '../../division/stages';
+import { compareSteps, framesFor, fusedPairs, meiosisFrames, mitosisFrames, type Chromatid, type Frame } from '../../division/stages';
 import { Callout, Membrane, Part, rand, useSelection } from './common';
 import Binary from './Binary';
 
@@ -192,14 +192,6 @@ function Inclusions({ r, seed }: { r: number; seed: number }) {
 }
 
 type CellLike = { x: number; y: number; r: number };
-/** Index pairs of cells whose spheres intersect (a cell that is still dividing). */
-export const fusedPairs = (cells: CellLike[]) =>
-  cells.flatMap((a, i) =>
-    cells
-      .slice(i + 1)
-      .map((_, k) => [i, i + 1 + k] as [number, number])
-      .filter(([, j]) => Math.hypot(cells[j].x - a.x, cells[j].y - a.y) < a.r + cells[j].r - 1e-3),
-  );
 
 /** One membrane around two overlapping cells: the union of both spheres, creased by a cleavage furrow. */
 function Furrow({ a, b }: { a: CellLike; b: CellLike }) {

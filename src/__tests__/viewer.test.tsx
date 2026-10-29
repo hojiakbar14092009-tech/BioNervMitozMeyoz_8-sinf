@@ -4,9 +4,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import Viewer from '../features/three/Viewer';
 import { getTopic, topicsByBook } from '../data/registry';
 import { PRESETS, VIEWER, presetDirection } from '../features/three/viewerConfig';
-import { daughterLayout } from '../features/three/scenes/Binary';
-import { fusedPairs } from '../features/three/scenes/Division';
-import { meiosisFrames, mitosisFrames } from '../features/division/stages';
+import { daughterLayout, fusedPairs, meiosisFrames, mitosisFrames } from '../features/division/stages';
 
 beforeAll(() => {
   HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext; // no WebGL

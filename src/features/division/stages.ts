@@ -299,3 +299,21 @@ export const binaryStages: { name: string; text: string }[] = [
   { name: 'Membrananing botib kirishi', text: 'Hujayra membranasi ichkariga botib kirib, sitoplazma ikkiga bo‘linadi.' },
   { name: 'Ikki yangi bakteriya', text: 'Natijada yangi bakteriyalar hosil bo‘ladi. Ko‘payish geometrik progressiya asosida boradi (2, 4, 8, 16, 32...); qulay sharoitda ba’zi bakteriyalar har yigirma daqiqada bo‘linadi.' },
 ];
+
+/** Index pairs of cells whose spheres intersect (a cell that is still dividing → drawn with one furrowed membrane). */
+export const fusedPairs = (cells: { x: number; y: number; r: number }[]) =>
+  cells.flatMap((a, i) =>
+    cells
+      .slice(i + 1)
+      .map((_, k) => [i, i + 1 + k] as [number, number])
+      .filter(([, j]) => Math.hypot(cells[j].x - a.x, cells[j].y - a.y) < a.r + cells[j].r - 1e-3),
+  );
+
+/** Radius (and pole cap) of the 2.12 rod-shaped bacterium model. */
+export const BACTERIUM_R = 0.42;
+
+/** Each daughter exactly fills one half of the pinched mother cell (straight half-length, centre x), then they drift apart. */
+export function daughterLayout(motherHalf: number, apart: number) {
+  const R = BACTERIUM_R;
+  return { half: Math.max(0.05, (motherHalf + R) / 2 - R), x: (motherHalf + R) / 2 + apart * 0.5, cap: R };
+}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { BACTERIUM_R, daughterLayout } from '../../division/stages';
 import { Membrane, Part, rand } from './common';
 
 // Bacterial binary fission, Biologiya 10 p.73 (2.33-rasm): DNA replicates → copies separate →
@@ -13,13 +14,8 @@ const TARGET = [
   { elong: 0.42, pinch: 0.72, apart: 0, copy: 1, split: 1 },
   { elong: 0.42, pinch: 1, apart: 0.34, copy: 1, split: 1 },
 ];
-const R = 0.42;
+const R = BACTERIUM_R;
 const L0 = 0.62; // half-length of the straight part
-
-/** Each daughter exactly fills one half of the pinched mother cell (straight half-length, centre x), then they drift apart. */
-export function daughterLayout(motherHalf: number, apart: number) {
-  return { half: Math.max(0.05, (motherHalf + R) / 2 - R), x: (motherHalf + R) / 2 + apart * 0.5, cap: R };
-}
 
 /** Rod cell outline (lathe about x): rounded poles; `pinch` narrows the middle toward division. */
 function rodProfile(half: number, pinch: number, cap = R) {
