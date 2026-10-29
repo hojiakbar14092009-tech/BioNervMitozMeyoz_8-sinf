@@ -27,6 +27,7 @@ npm run dev
 | `npm run validate` | Run content/quiz manifest validation only |
 | `npm run build` | Typecheck, then build for production into `dist/` |
 | `npm run preview` | Serve the production build |
+| `npx vite build --mode qa --outDir dist-qa` | Production-like build with the 3D QA hook (measurements only) |
 
 In development the app also **fails loudly** if a manifest is invalid. Checked cases: a missing or duplicate topic, the wrong book, wrong order, a quiz pointing to the wrong topic, or a source page outside its lesson.
 
@@ -100,10 +101,44 @@ The supplied visual references are stored in `docs/reference-images/` and mapped
 
 The models are procedural: closed volumes built from tapered tubes, displaced surfaces and instanced clusters, with no external GLB files. They read correctly from every angle and download nothing extra. The brain sagittal cut removes the near hemisphere whole and draws inner structures as solid halves with flat cut faces, so no hollow shells show. The neuron grows a deterministic, tapering dendrite tree and a terminal arborization with boutons.
 
-**Measured** (production build, Chromium in the desktop app, Windows desktop GPU, viewport emulated at 414×896; not a real iPhone):
-- brain at 414×896: about 53 fps over a 3 s sample, worst frame 42 ms, JS heap about 15 MB;
-- six 3D routes (brain → spinal cord → reflex arc → DNA → 2.12 → 2.13) cycled four times in-app: one canvas alive at a time; the heap peaked at 58 MB between collections and returned to about 17 MB, with no upward trend;
-- no horizontal overflow at 414 px.
+### QA (final pass)
+
+A dev-only hook exposes `window.__bioQA`. It lives in `src/features/three/QaSheet.tsx` and is mounted by `npm run dev` and by `vite build --mode qa`, never in the production bundle. It provides:
+- an 8-angle contact sheet (0°–315°);
+- manual frame stepping;
+- tap-target discovery by raycasting (`targets()`);
+- screen extent and a camera read-out;
+- a frame-cost bench.
+
+- **360°:** every primary model was rendered at all 8 azimuths, plus free rotation: neuron, reflex arc, spinal cord, brain (§42 and the §47 lobe variant), brain sagittal section, cell energy, mitochondrion cutaway, DNA (helix, replication, transcription), ribosome (initiation and elongation), the 2.12 bacterium (all 5 steps), mitosis (all stages), meiosis (all 9 stages) and the 2.15 comparison.
+- **Hotspots:** on every lesson with a 3D scene, each structure was located by raycast and clicked with real pointer events at 900×700 and 414×896. Each card was checked for label and page. Two exceptions: the spindle is selectable from the legend only (thin lines are not practical tap targets), and centromeres are small on phones (about 15×15 px), so the legend chip is the easier route.
+- **Presets:** all 6 presets on 9 scenes at 900 and 414 px land, keep the whole model in frame, keep the current stage, and ease in and out.
+- **Auto-rotation:** a full turn of the brain took 40 s, and callouts moved at most 6 px per frame. Rotation is scaled by frame time.
+- **Responsive:** no horizontal page scroll at 320×568, 360×800, 375×812, 390×844, 414×896, 430×932, 768×1024, 1024×768, 1366×768 or 1440×900. The microscope's phase gallery is an intentional horizontal strip.
+- **Accessibility:**
+  - Under reduced motion, auto-rotation is off and its control is hidden; the impulse and manual rotation still work.
+  - Every viewer control has a name and a visible focus ring.
+  - On-canvas callouts are pointer shortcuts (`tabIndex=-1`); the legend chips are the keyboard path.
+  - A test covers the WebGL fallback, including the 2.12 bacterium schematic.
+- **Reliability:** the production build went through 60 in-app navigations over 10 heavy routes. One canvas was alive at a time and there was no WebGL-context warning. Window and document listeners stayed constant at 8. Heap after forced GC went from 11.1 to 11.8 MB. The dev console was clean across 26 routes.
+
+**Measured frame cost.** Each frame runs scene updates and the render, then waits for the GPU to finish. This is a cost proxy, not on-device FPS. Setup: production-like `qa` build, Playwright Chromium, 414×896 at 2× pixel ratio, Intel Iris Xe.
+
+| Model | median ms | p95 ms | draws | triangles |
+|---|---|---|---|---|
+| Neuron | 3.6 | 6.3 | 19 | 27k |
+| Reflex arc | 6.5 | 9.8 | 32 | 29k |
+| Spinal cord | 7.4 | 11.5 | 25 | 57k |
+| Brain | 7.2 | 14.0 | 15 | 148k |
+| Cell energy | 6.9 | 11.4 | 47 | 60k |
+| DNA (replication, strands opening) | 8.7 | 20.5 | 64 | 54k |
+| Ribosome | 5.4 | 10.2 | 42 | 7k |
+| Prokaryote | 5.7 | 9.3 | 6 | 25k |
+| Mitosis (metaphase) | 5.6 | 8.2 | 6 | 25k |
+| Meiosis (prophase I) | 9.6 | 16.4 | 48 | 26k |
+| Mitosis vs meiosis | 11.6 | 18.6 | 95 | 52k |
+
+Occasional single-frame spikes of 40–67 ms were seen. In that throttled window, the scene took 2.3–3.5 s to become ready after scrolling, including the lazy chunk. In an earlier pass, in the desktop app's visible browser pane, the brain ran at about 53 fps at 414×896.
 
 Real-device performance on an iPhone 11 has not been measured.
 
