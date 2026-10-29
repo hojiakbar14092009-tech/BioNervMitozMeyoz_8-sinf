@@ -77,6 +77,29 @@ Validation fails if a label's page falls outside its lesson. Scenes render geome
 
 **Performance.** Scenes are lazy-loaded and mounted only near the viewport, so one WebGL context is active at a time. Device pixel ratio adapts to measured performance (mobile starts at 1.5 or less). A veil shows until the first frames render. If WebGL is unavailable or a scene fails, a schematic SVG with the title, description and legend is shown instead. `prefers-reduced-motion` disables auto-rotation and decorative motion.
 
+### Reference images → models
+
+The supplied visual references are stored in `docs/reference-images/` and mapped in `src/data/modelReferences.ts`. Each entry records the book, the lessons, the scene, and the visual traits taken from it. Content validation fails if a reference points to a lesson without that scene. The images guide look and composition only: every label still comes from the lesson PDF, so text in the images that the lesson doesn't teach (e.g. Krebs/NADH, "kiyazma") is not used.
+
+| Reference | Lessons | Scene |
+|---|---|---|
+| `8-42-bosh-miya` | 8 · 42, 43, 47–50 | brain: colour-segmented lobes, striated cerebellum, spinal continuation, sagittal cut |
+| `8-41-orqa-miya-kesimi` | 8 · 41 | spinal cord: cream white matter, inlaid grey matter, fanned root bundles, ganglia |
+| `8-40-refleks-yoyi` | 8 · 40, 45 | reflex arc: layered skin, glowing sensory fibre, interneuron, red motor fibre, striated muscle |
+| `10-2-8-energiya-oqimi` | 10 · 2.8 | cell energy: membrane, nucleus, mitochondria with cristae (section), glucose, ATP |
+| `10-2-10-dnk` | 10 · 2.10 | DNA: atom-bead backbones, base rungs, travelling polymerase |
+| `10-2-11-ribosoma` | 10 · 2.11 | ribosome: blob subunits, iRNK ladder, tRNAs, polypeptide |
+| `10-2-12-mitoz`, `10-2-13-meyoz`, `10-2-15-mitoz-meyoz` | 10 · 2.12, 2.13, 2.15 | beaded chromosomes, spindle and asters, crossing-over, synchronized comparison |
+| `10-2-14-virtual-mikroskop` | 10 · 2.14 | 2D canvas virtual microscope (stained onion root tip, 10×/40×) |
+
+**Viewer controls** (`viewerConfig.ts`, per model):
+- camera framing, distance and polar limits;
+- view presets Old / Orqa / Chap / O‘ng / Yuqori / 3/4, with smooth orbit moves;
+- auto-rotation of about 30 s per turn that pauses on touch or selection and resumes after 6 s;
+- zoom pad, "Belgilar" labelled callouts, section toggle (brain sagittal cut, mitochondrion), stage playback, and fullscreen where the browser supports it.
+
+The models are procedural: closed volumes built from tapered tubes, displaced surfaces and instanced bead clusters, with no external GLB files. They read correctly from every angle and download nothing extra.
+
 ## Highlights
 
 Highlights are created only by the learner: select text in a lesson block, then tap "Belgilash".
