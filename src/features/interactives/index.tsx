@@ -18,7 +18,7 @@ const MAP: Record<InteractiveKey, ComponentType> = {
   translationModel: g10('TranslationModel'),
   cellCycle: g10('CellCycle'),
   meiosisJourney: g10('MeiosisJourney'),
-  microscope: g10('Microscope'),
+  microscope: lazy(() => import('./Microscope')),
   eventMatch: g10('EventMatch'),
 };
 

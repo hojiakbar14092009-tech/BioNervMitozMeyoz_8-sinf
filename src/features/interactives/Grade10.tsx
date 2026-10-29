@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { play } from '../../lib/audio';
-import DivisionSVG from '../division/DivisionSVG';
-import { mitosisFrames } from '../division/stages';
 import { GENETIC_CODE, anticodon, codons, complementDNA, transcribe } from '../three/sequences';
 import { PROBLEMS, energy } from './energy';
 import { Matcher, NumberCheck, Panel } from './shared';
@@ -260,70 +258,6 @@ export function MeiosisJourney() {
         ))}
       </ul>
       <p className="fb-line" aria-live="polite">{score} / {MEIOSIS_ITEMS.length} to‘g‘ri</p>
-    </Panel>
-  );
-}
-
-// 2.14 — schematic onion root-tip field; stages from 2.12.
-const PHASES = mitosisFrames.slice(0, 5); // interfaza … telofaza
-const FIELD = [0, 2, 0, 1, 3, 0, 4, 1, 0, 2, 0, 3, 0, 1, 4, 0];
-
-export function Microscope() {
-  const [zoom, setZoom] = useState<'low' | 'high'>('low');
-  const [cell, setCell] = useState<number | null>(null);
-  const [guess, setGuess] = useState<number | null>(null);
-  const [found, setFound] = useState<Set<number>>(new Set());
-  const target = cell !== null ? FIELD[cell] : null;
-  return (
-    <Panel title="Virtual mikroskop: piyoz ildizi uchi" note="Sxematik preparat. Haqiqiy preparatda xromosomalarni atsetokarmin bo‘yaydi; avval kichik, so‘ng katta obyektivda kuzatiladi (79–80-betlar).">
-      <div className="seg" role="group" aria-label="Obyektiv">
-        <button type="button" aria-pressed={zoom === 'low'} className={zoom === 'low' ? 'on' : ''} onClick={() => setZoom('low')}>Kichik obyektiv</button>
-        <button type="button" aria-pressed={zoom === 'high'} className={zoom === 'high' ? 'on' : ''} onClick={() => setZoom('high')}>Katta obyektiv</button>
-      </div>
-      <div className={`scope ${zoom}`}>
-        <div className="scope-field">
-          {FIELD.map((f, i) => (
-            <button
-              key={i}
-              type="button"
-              className={`scope-cell ${cell === i ? 'on' : ''} ${found.has(i) ? 'found' : ''}`}
-              aria-label={`${i + 1}-hujayra`}
-              disabled={zoom === 'low'}
-              onClick={() => { play('click'); setCell(i); setGuess(null); }}
-            >
-              <DivisionSVG frame={PHASES[f]} compact label={`${i + 1}-hujayra`} />
-            </button>
-          ))}
-        </div>
-      </div>
-      {zoom === 'low' && <p className="fb-line">Tasvir topildi. Hujayralarni ko‘rish uchun katta obyektivga o‘ting.</p>}
-      {zoom === 'high' && cell === null && <p className="fb-line">Hujayrani tanlang va fazasini aniqlang.</p>}
-      {zoom === 'high' && cell !== null && target !== null && (
-        <div>
-          <p>{cell + 1}-hujayra qaysi fazada?</p>
-          <div className="seg wrap" role="group" aria-label="Faza">
-            {PHASES.map((p, k) => (
-              <button
-                key={p.id}
-                type="button"
-                aria-pressed={guess === k}
-                className={guess === k ? (k === target ? 'on ok' : 'on bad') : ''}
-                onClick={() => {
-                  play('click');
-                  setGuess(k);
-                  if (k === target) setFound(new Set(found).add(cell));
-                }}
-              >
-                {p.name}
-              </button>
-            ))}
-          </div>
-          <p className="fb-line" aria-live="polite">
-            {guess !== null && (guess === target ? `✓ To‘g‘ri — ${PHASES[target].name}: ${PHASES[target].text}` : '✕ Xromosomalar joylashuviga qarang: yadro bormi, ekvatordami, qutblardami?')}
-          </p>
-        </div>
-      )}
-      <p className="muted small">Aniqlangan hujayralar: {found.size} / {FIELD.length}</p>
     </Panel>
   );
 }

@@ -5,7 +5,7 @@ function ChromatidShape({ c }: { c: Chromatid }) {
   const half = (c.len * (0.5 + c.scale * 0.5)) / 2;
   const deg = (c.rot * 180) / Math.PI;
   return (
-    <g transform={`translate(${c.x} ${-c.y}) rotate(${-deg})`} opacity={c.scale < 0.4 ? 0.55 : 1}>
+    <g transform={`translate(${c.x + (c.z ?? 0) * 0.5} ${-c.y}) rotate(${-deg})`} opacity={c.scale < 0.4 ? 0.55 : 1}>
       <rect x={-half} y={-w / 2} width={half * 2} height={w} rx={w / 2} fill={`var(--chr-${c.color})`} />
       {c.tip && <rect x={half * 0.25} y={-w / 2} width={half * 0.75} height={w} rx={w / 2} fill={`var(--chr-${c.tip})`} />}
     </g>

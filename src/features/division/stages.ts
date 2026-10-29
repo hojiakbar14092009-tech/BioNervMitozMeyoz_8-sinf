@@ -5,6 +5,8 @@ export interface Chromatid {
   id: string;
   x: number;
   y: number;
+  /** Depth on the equatorial plane (3D only; SVG ignores it). */
+  z?: number;
   rot: number; // radians; 0 = horizontal
   len: number;
   color: 'p' | 'm';
@@ -51,11 +53,19 @@ const ct = (c: 'A' | 'B', par: 'p' | 'm', s: 1 | 2, x: number, y: number, rot: n
 });
 
 /** Both sisters of a chromosome, offset perpendicular to its axis. */
-function chromosome(c: 'A' | 'B', par: 'p' | 'm', x: number, y: number, rot: number, scale = 1, gap = 0.045, tips: [('p' | 'm')?, ('p' | 'm')?] = [undefined, undefined]) {
+function chromosome(c: 'A' | 'B', par: 'p' | 'm', x: number, y: number, rot: number, scale = 1, gap = 0.045, tips: [('p' | 'm')?, ('p' | 'm')?] = [undefined, undefined], z = 0) {
   const dx = -Math.sin(rot) * gap;
   const dy = Math.cos(rot) * gap;
-  return [ct(c, par, 1, x - dx, y - dy, rot, scale, tips[0]), ct(c, par, 2, x + dx, y + dy, rot, scale, tips[1])];
+  return [ct(c, par, 1, x - dx, y - dy, rot, scale, tips[0]), ct(c, par, 2, x + dx, y + dy, rot, scale, tips[1])].map((k) => ({ ...k, z }));
 }
+
+// Metaphase plate positions (y, z): chromosomes spread over the equatorial plane, not stacked in one column.
+const PLATE: [number, number][] = [
+  [0.3, 0.22],
+  [0.3, -0.22],
+  [-0.26, 0.22],
+  [-0.26, -0.22],
+];
 
 const chromatin = (cx: number, cy: number, spread = 0.28) =>
   CHR.flatMap(([c, par], i) =>
@@ -89,7 +99,7 @@ export const mitosisFrames: Frame[] = [
     formula: '2n4c',
     text: 'Xromosomalar ekvator tekisligiga joylashadi. Urchuq iplari har bir xromosoma sentromerasiga ikki tomondan birikadi.',
     cells: one(0, true),
-    chromatids: [...chromosome('A', 'p', 0, 0.48, Math.PI / 2), ...chromosome('A', 'm', 0, 0.16, Math.PI / 2), ...chromosome('B', 'p', 0, -0.16, Math.PI / 2), ...chromosome('B', 'm', 0, -0.44, Math.PI / 2)],
+    chromatids: CHR.flatMap(([c, par], i) => chromosome(c, par, 0, PLATE[i][0], Math.PI / 2, 1, 0.045, [undefined, undefined], PLATE[i][1])),
   },
   {
     id: 'anafaza',
@@ -97,7 +107,7 @@ export const mitosisFrames: Frame[] = [
     formula: '4n4c',
     text: 'Sentromeralar ikkiga bo‘linadi. Urchuq iplari qisqarib, xromatidalarni qarama-qarshi qutblarga tortadi; ular qutblarga xromosoma sifatida yetib boradi.',
     cells: one(0, true),
-    chromatids: CHR.flatMap(([c, par], i) => [ct(c, par, 1, -0.58, 0.42 - i * 0.28, Math.PI / 2), ct(c, par, 2, 0.58, 0.42 - i * 0.28, Math.PI / 2)]),
+    chromatids: CHR.flatMap(([c, par], i) => [ct(c, par, 1, -0.58, PLATE[i][0], Math.PI / 2), ct(c, par, 2, 0.58, PLATE[i][0], Math.PI / 2)].map((k) => ({ ...k, z: PLATE[i][1] }))),
   },
   {
     id: 'telofaza',

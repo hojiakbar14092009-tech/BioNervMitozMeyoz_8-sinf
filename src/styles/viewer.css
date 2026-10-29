@@ -115,3 +115,57 @@
 .viewer.is-full .viewer-what strong {
   color: #f3f1ec;
 }
+
+/* virtual microscope (2.14) */
+.mscope-canvas {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 1;
+  margin: 8px auto;
+  border-radius: 16px;
+  background: #16111c;
+  touch-action: none;
+  cursor: grab;
+}
+.mscope-info {
+  display: grid;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--elev);
+  border: 1px solid var(--border);
+  margin: 10px 0;
+}
+@media (min-width: 560px) {
+  .mscope-info {
+    grid-template-columns: 180px 1fr;
+  }
+}
+.mscope-closeup {
+  width: 100%;
+  max-width: 220px;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.phase-gallery {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 6px 2px;
+}
+.phase-gallery figure {
+  margin: 0;
+  text-align: center;
+  flex: none;
+}
+.phase-gallery canvas {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.phase-gallery figcaption {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
